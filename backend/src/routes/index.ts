@@ -5,16 +5,16 @@ import { booksRouter } from "./books.routes";
 
 export const router = Router()
 
-// Public routes
-router.use('/v1', limiter, (_: Request, response: Response) => {
-  return response.json('Try our auth and books endpoints.')
-})
-
-router.use('/', limiter, (_: Request, response: Response) => {
-  return response.json('Try our v1 endpoints.')
-})
-
-router.use('/auth', limiter, authRouter)
-
 // Private routes
 router.use('/books', booksRouter)
+
+// Public routes
+router.use('/auth', limiter, authRouter)
+
+router.all('/', limiter, (request: Request, response: Response) => {
+  if (request.method !== 'GET') {
+    return response.status(403).json('[v1] Invalid method.')
+  }
+
+  return response.status(200).json('Try our auth and books endpoints.')
+})

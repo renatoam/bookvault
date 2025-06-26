@@ -1,25 +1,67 @@
+import type { FormEvent } from "react"
+import { useCreateBook } from "../hooks/useCreateBook"
+import type { Book } from "../services/createBook"
+import { useBookValidation } from "../hooks/useBookValidation"
+import { Loader } from "lucide-react"
+
 export default function Book() {
+  const { mutate, isPending } = useCreateBook()
+  const { validate, errors } = useBookValidation()
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    const keys = Array.from(data.keys())
+    const fields = keys.reduce((acc, key) => {
+      const value = (data.get(key) ?? '') as string
+      return {
+        ...acc,
+        [key]: value
+      }
+    }, {} as Book)
+
+    const isValid = validate(fields)
+
+    if (isValid) {
+      mutate({ ...fields })
+    }
+  }
+
   return (
-    <form className="space-y-4 m-auto w-lg">
-      <fieldset className="fieldset border-base-300 rounded-box border p-4">
+    <form
+      className="space-y-4 m-auto w-lg"
+      onSubmit={handleSubmit}
+    >
+      <fieldset className="fieldset border-base-300 rounded-box border p-4" disabled={isPending}>
         <legend className="fieldset-legend">Edit / Create</legend>
 
-        <label className="label">Title</label>
-        <input type="text" className="input" placeholder="Type the book's title..." />
+        <label htmlFor="title" className="label">Title</label>
+        <input
+          id="title"
+          name="title"
+          type="text"
+          className={`input ${errors?.title ? 'input-error' : ''}`}
+          placeholder="Type the book's title..."
+        />
+        {errors?.title && <span className="label text-error">{errors.title}</span>}
 
-        <label className="label">Author</label>
-        <input type="text" className="input" placeholder="Who has written this?" />
+        <label htmlFor="author" className="label">Author</label>
+        <input id="author" name="author" type="text" className="input" placeholder="Who has written this?" />
+        
+        <label htmlFor="description" className="label">Description</label>
+        <input id="description" name="description" type="text" className="input" placeholder="Tell us more about this book" />
 
-        <label className="label">Status</label>
-        <select defaultValue="Set the status" className="select">
+        <label htmlFor="status" className="label">Status</label>
+        <select id="status" name="status" defaultValue="Set the status" className="select">
           <option disabled={true}>Set the status</option>
-          <option>Wishlist</option>
-          <option>Reading</option>
-          <option>Finished</option>
+          <option value={'WISHLIST'}>Wishlist</option>
+          <option value={'READING'}>Reading</option>
+          <option value={'FINISHED'}>Finished</option>
         </select>
-        <span className="label">Error</span>
 
-        <button className="btn btn-neutral mt-4">Save</button>
+        <button type="submit" className="btn btn-neutral mt-4">
+          {isPending ? <Loader className="animate-spin" /> : "Save"}
+        </button>
       </fieldset>
     </form>
   )
