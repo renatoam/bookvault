@@ -12,7 +12,9 @@
     "test:watch": "vitest watch",
     "check": "biome check ./src",
     "format": "biome format --write ./src",
-    "lint": "biome lint --write ./src"
+    "lint": "biome lint --write ./src",
+    "migrate:watch": "prisma migrate dev --name init --schema ./src/config/schema.prisma",
+    "migrate": "prisma migrate deploy --schema ./src/config/schema.prisma"
   },
   "keywords": [
     "node",
