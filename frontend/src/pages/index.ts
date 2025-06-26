@@ -1,0 +1,6 @@
+export { default as Home } from "./home"
+export { default as Book } from "./book"
+export { default as Books } from "./books"
+export { default as Forgot } from "./forgot"
+export { default as Signin } from "./signin"
+export { default as SignUp } from "./signup"

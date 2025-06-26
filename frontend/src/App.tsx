@@ -3,7 +3,7 @@ import './App.scss'
 
 function App() {
   return (
-    <>
+    <main className="flex flex-col min-h-screen">
       <div className="navbar bg-base-100 shadow-sm px-4 gap-4">
         <div className="flex-1">
           <a className="btn btn-ghost text-xl">daisyUI</a>
@@ -11,9 +11,27 @@ function App() {
         <div className="flex-none">
           <ul className="menu menu-horizontal px-1">
             <li><a>My Books</a></li>
-            <li><a>About</a></li>
+            <li><a>Docs</a></li>
           </ul>
         </div>
+        <section id="search">
+          <label className="input">
+            <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <g
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                strokeWidth="2.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </g>
+            </svg>
+            <input type="search" className="grow" placeholder="Search" />
+            <kbd className="kbd kbd-sm">↵</kbd>
+          </label>
+        </section>
         <div className="dropdown">
           <button tabIndex={0} className="btn btn-ghost">
             Theme
@@ -63,25 +81,26 @@ function App() {
         </div>
         <ul
           tabIndex={0}
-          className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+          className="dropdown-content bg-base-300 rounded-box z-1 w-24 p-2 shadow-2xl">
           <li>
-            <a className="justify-between">
+            <a className="w-full btn btn-sm btn-block btn-ghost justify-start">
               Profile
-              <span className="badge">New</span>
             </a>
           </li>
-          <li><a>Settings</a></li>
-          <li><a>Logout</a></li>
+          <li className="w-full btn btn-sm btn-block btn-ghost justify-start"><a>Settings</a></li>
+          <li className="w-full btn btn-sm btn-block btn-ghost justify-start"><a>Logout</a></li>
         </ul>
       </div>
       </div>
-      <Outlet />
+      <article id="content" className="flex-1 flex place-content-center">
+        <Outlet />
+      </article>
       <footer className="footer sm:footer-horizontal footer-center bg-base-300 text-base-content p-4">
         <aside>
           <p>Book Vault © {new Date().getFullYear()} - Renato Melo</p>
         </aside>
       </footer>
-    </>
+    </main>
   )
 }
 
