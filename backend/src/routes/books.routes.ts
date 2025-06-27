@@ -1,7 +1,12 @@
 import { Router, type Request, type Response } from "express";
 import { prisma } from "../config/prisma";
 import { randomUUID } from "node:crypto";
-import { createBookValidation } from "../middlewares/bodyValidation";
+import { createBookValidation } from "../middlewares/bookBodyValidation";
+import { validateIncomingId } from "../middlewares/incomingIdValidation";
+import { errorResponseHandler } from "../config/httpErrorResponseHandler";
+import { NotFoundError, ServerError } from "../errors";
+import { successResponseHandler } from "../config/httpSuccessResponseHandler";
+import { HTTP_STATUS_CODE } from "../config/httpResponseHandlers";
 
 export const booksRouter = Router()
 
@@ -14,31 +19,38 @@ interface Book {
 }
 
 booksRouter.get('/', async (_request: Request, response: Response) => {
+  const errorHandler = errorResponseHandler(response)
+  const successHandler = successResponseHandler(response)
+
   try {
     const data = await prisma.book.findMany()
     
-    if (!data || data.length === 0) {
-      return response.status(404).json({
-        error: 'Not found',
-        message: 'No book found for this user.'
-      })
+    if (!data) {
+      const serverError = new ServerError(
+        Error('Something went wrong when retrieving books.')
+      )
+      return errorHandler(serverError)
     }
 
-    return response.status(200).json({
-      data,
-      message: 'Books successfully retrieved.'
-    })
+    return successHandler(HTTP_STATUS_CODE.SUCCESS, data)
   } catch (error) {
-    console.error({ error })
-    return response.status(500).json({
-      error: 'Server error',
-      message: 'Something went wrong when creating the book.'
-    })
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
   }
 })
 
-booksRouter.post('/new', createBookValidation, async (request: Request, response: Response) => {
-  const { title, author, status, description } = (request.body ?? {}) as Book
+booksRouter.post('/new', createBookValidation, async (
+  request: Request,
+  response: Response
+) => {
+  const successHandler = successResponseHandler(response)
+  const errorHandler = errorResponseHandler(response)
+  const {
+    title,
+    author,
+    status,
+    description
+  } = (request.body ?? {}) as Book
 
   try {
     const result = await prisma.book.create({
@@ -64,21 +76,41 @@ booksRouter.post('/new', createBookValidation, async (request: Request, response
       }
     })
 
-    console.log({ result })
-    return response.status(201).json({
-      data: result,
-      message: 'Book successfully created.'
-    })
+    return successHandler(HTTP_STATUS_CODE.SUCCESS, result)
   } catch (error) {
-    console.error({ error })
-    return response.status(500).json({
-      error: 'Server error',
-      message: 'Something went wrong when creating the book.'
-    })
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
   }
 })
 
-booksRouter.put('/:id', async (request: Request, response: Response) => {
+booksRouter.get('/:id', validateIncomingId, async (
+  request: Request<{ id: string }>,
+  response: Response
+) => {
+  const successHandler = successResponseHandler(response)
+  const errorHandler = errorResponseHandler(response)
+  const { id } = request.params
+  
+  try {
+    const result = await prisma.book.findUnique({
+      where: {
+        id
+      }
+    })
+
+    if (!result) {
+      const notFoundError = new NotFoundError(Error('Book not found.'))
+      return errorHandler(notFoundError)
+    }
+
+    return successHandler(HTTP_STATUS_CODE.SUCCESS, result)
+  } catch (error) {
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
+  }
+})
+
+booksRouter.put('/:id', validateIncomingId, async (request: Request, response: Response) => {
   console.log(request.body)
   return response.status(200).json('Book Success')
 })
