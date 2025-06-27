@@ -3,27 +3,56 @@ import { prisma } from "../config/prisma";
 import { randomUUID } from "node:crypto";
 import { createBookValidation } from "../middlewares/bookBodyValidation";
 import { validateIncomingId } from "../middlewares/incomingIdValidation";
-import { errorResponseHandler } from "../config/httpErrorResponseHandler";
+import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
 import { NotFoundError, ServerError } from "../errors";
-import { successResponseHandler } from "../config/httpSuccessResponseHandler";
-import { HTTP_STATUS_CODE } from "../config/httpResponseHandlers";
+import { successResponseHandler } from "../config/http/httpSuccessResponseHandler";
+import { HTTP_STATUS_CODE } from "../config/http/httpResponseHandlers";
+import type { CreateBookRequest, SearchRequest } from "../config/http/httpTypes";
+import { searchBooksValidation } from "../middlewares/searchBooksValidation";
 
 export const booksRouter = Router()
 
-interface Book {
-  id?: string
-  title: string
-  author: string
-  status: 'WISHLIST' | 'READING' | 'FINISHED'
-  description?: string
-}
-
-booksRouter.get('/', async (_request: Request, response: Response) => {
+booksRouter.get('/', searchBooksValidation, async (
+  request: SearchRequest,
+  response: Response
+) => {
+  const DEFAULT_LIMIT = 20
   const errorHandler = errorResponseHandler(response)
   const successHandler = successResponseHandler(response)
+  const {
+    q,
+    author,
+    status,
+    page,
+    limit,
+    orderBy
+  } = request.query
+  let where
+
+  if (q) {
+    where = {
+      OR: [
+        { title: { contains: q, mode: 'insensitive' } as const },
+        { author: { contains: q, mode: 'insensitive' } as const }
+      ]
+    }
+  }
+
+  if (author) {
+    where = { ...where, author }
+  }
+
+  if (status) {
+    where = { ...where, status }
+  }
 
   try {
-    const data = await prisma.book.findMany()
+    const data = await prisma.book.findMany({
+      where,
+      skip: page ? ((page - 1) * (limit ?? DEFAULT_LIMIT) ): undefined,
+      take: page ? Number(limit ?? DEFAULT_LIMIT) : DEFAULT_LIMIT,
+      orderBy: orderBy ? { [orderBy.field]: orderBy?.order } : undefined
+    })
     
     if (!data) {
       const serverError = new ServerError(
@@ -40,7 +69,7 @@ booksRouter.get('/', async (_request: Request, response: Response) => {
 })
 
 booksRouter.post('/new', createBookValidation, async (
-  request: Request,
+  request: CreateBookRequest,
   response: Response
 ) => {
   const successHandler = successResponseHandler(response)
@@ -50,7 +79,7 @@ booksRouter.post('/new', createBookValidation, async (
     author,
     status,
     description
-  } = (request.body ?? {}) as Book
+  } = request.body
 
   try {
     const result = await prisma.book.create({

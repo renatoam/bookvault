@@ -7,7 +7,7 @@ import {
   ServerError,
   DatabaseError,
   type ErrorBody
-} from "../errors"
+} from "../../errors"
 
 export const HTTP_STATUS_CODE = {
   SUCCESS: 200,

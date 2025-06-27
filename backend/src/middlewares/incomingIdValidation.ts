@@ -1,5 +1,5 @@
 import { type Request, type Response, type NextFunction } from "express"
-import { errorResponseHandler } from "../config/httpErrorResponseHandler"
+import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
 import { ClientError, getErrorMessage } from "../errors"
 import { z } from "zod"
 

@@ -1,18 +1,20 @@
-import { type Request, type Response, type NextFunction } from "express"
+import { type NextFunction, type Response } from "express";
 import { z } from "zod";
+import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
+import type { CreateBookRequest } from "../config/http/httpTypes";
 import { ClientError, getErrorMessage } from "../errors";
-import { errorResponseHandler } from "../config/httpErrorResponseHandler";
+import { statusEnum } from "./helpers";
 
 export const bookSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Title is required"),
   author: z.string().min(1, "Author is required."),
-  status: z.enum(['WISHLIST', 'READING', 'FINISHED']),
+  status: statusEnum,
   description: z.string().min(1, "Description is required."),
 });
 
 export const createBookValidation = async (
-  request: Request,
+  request: CreateBookRequest,
   response: Response,
   next: NextFunction
 ) => {
