@@ -4,9 +4,9 @@ import { z } from "zod";
 export const bookSchema = z.object({
   id: z.string().optional(),
   title: z.string().min(1, "Title is required"),
-  author: z.string().optional(),
-  status: z.enum(['WISHLIST', 'READING', 'FINISHED']).optional(),
-  description: z.string().optional(),
+  author: z.string(),
+  status: z.enum(['WISHLIST', 'READING', 'FINISHED']),
+  description: z.string(),
 });
 
 export const createBookValidation = async (request: Request, response: Response, next: NextFunction) => {

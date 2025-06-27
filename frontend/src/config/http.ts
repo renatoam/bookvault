@@ -1,11 +1,14 @@
 type FetchOptions = RequestInit & { parseJson?: boolean };
 
+const apiURL = import.meta.env.VITE_API_URL
+
 export async function customFetch<T = unknown>(
-  url: string,
+  endpoint: string,
   options: FetchOptions = {}
 ): Promise<T> {
   try {
-    const response = await fetch(url, {
+    const URL = `${apiURL}/${endpoint}`
+    const response = await fetch(URL, {
       ...options,
       headers: {
         ...options.headers,

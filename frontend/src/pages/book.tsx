@@ -1,8 +1,8 @@
 import type { FormEvent } from "react"
 import { useCreateBook } from "../hooks/useCreateBook"
-import type { Book } from "../services/createBook"
 import { useBookValidation } from "../hooks/useBookValidation"
 import { Loader } from "lucide-react"
+import type { Book } from "../types/book"
 
 export default function Book() {
   const { mutate, isPending } = useCreateBook()

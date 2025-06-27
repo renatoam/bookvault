@@ -5,18 +5,37 @@ import { createBookValidation } from "../middlewares/bodyValidation";
 
 export const booksRouter = Router()
 
-booksRouter.get('/', async (request: Request, response: Response) => {
-  console.log(request.headers)
-  return response.status(200).json('Book Success')
-})
-
 interface Book {
   id?: string
   title: string
-  author?: string
-  status?: 'WISHLIST' | 'READING' | 'FINISHED'
+  author: string
+  status: 'WISHLIST' | 'READING' | 'FINISHED'
   description?: string
 }
+
+booksRouter.get('/', async (_request: Request, response: Response) => {
+  try {
+    const data = await prisma.book.findMany()
+    
+    if (!data || data.length === 0) {
+      return response.status(404).json({
+        error: 'Not found',
+        message: 'No book found for this user.'
+      })
+    }
+
+    return response.status(200).json({
+      data,
+      message: 'Books successfully retrieved.'
+    })
+  } catch (error) {
+    console.error({ error })
+    return response.status(500).json({
+      error: 'Server error',
+      message: 'Something went wrong when creating the book.'
+    })
+  }
+})
 
 booksRouter.post('/new', createBookValidation, async (request: Request, response: Response) => {
   const { title, author, status, description } = (request.body ?? {}) as Book
@@ -25,9 +44,9 @@ booksRouter.post('/new', createBookValidation, async (request: Request, response
     const result = await prisma.book.create({
       data: {
         title,
-        author: author ?? 'default',
-        status: status ?? 'WISHLIST',
-        description: description ?? 'No description yet.',
+        author,
+        status,
+        description,
         id: randomUUID(),
         user: {
           connectOrCreate: {

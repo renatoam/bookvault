@@ -1,12 +1,16 @@
-import { Outlet } from 'react-router'
+import { Link, Outlet } from 'react-router'
 import './App.scss'
+import { PawPrint } from 'lucide-react'
 
 function App() {
   return (
     <main className="flex flex-col min-h-screen">
       <div className="navbar bg-base-100 shadow-sm px-4 gap-4">
         <div className="flex-1">
-          <a className="btn btn-ghost text-xl">daisyUI</a>
+          <Link to="/" className="btn btn-ghost text-xl">
+            <p>Skoob-Doo</p>
+            <PawPrint size={32} />
+          </Link>
         </div>
         <div className="flex-none">
           <ul className="menu menu-horizontal px-1">
