@@ -5,10 +5,7 @@ import type { Books } from "../types/book"
 export const useFindBooks = () => {
   return useQuery<Books>({
     queryKey: ['books'],
-    queryFn: async () => {
-      const response = await findBooks()
-      return response.data
-    },
+    queryFn: async () => findBooks(),
     refetchOnWindowFocus: false,
     retry: 3,
   })

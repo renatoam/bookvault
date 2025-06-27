@@ -26,7 +26,7 @@ export async function customFetch<T = unknown>(
         console.error('Non-ok response: ', { error })
       }
 
-      throw new Error(errorMessage);
+      throw errorMessage
     }
 
     return (await response.json()) as T;
