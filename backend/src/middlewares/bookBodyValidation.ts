@@ -1,7 +1,7 @@
 import { type NextFunction, type Response } from "express";
 import { z } from "zod";
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
-import type { CreateBookRequest } from "../config/http/httpTypes";
+import type { UpsertBookRequest } from "../config/http/httpTypes";
 import { ClientError, getErrorMessage } from "../errors";
 import { statusEnum } from "./helpers";
 
@@ -13,15 +13,13 @@ export const bookSchema = z.object({
   description: z.string().min(1, "Description is required."),
 });
 
-export const createBookValidation = async (
-  request: CreateBookRequest,
+export const bodyBookValidation = async (
+  request: UpsertBookRequest,
   response: Response,
   next: NextFunction
 ) => {
   const errorHandler = errorResponseHandler(response)
   const parseResult = bookSchema.safeParse(request.body);
-
-  console.log({ body: request.body })
 
   if (!parseResult.success) {
     const errorMessage = getErrorMessage(parseResult.error.issues)

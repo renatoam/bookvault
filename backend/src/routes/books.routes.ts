@@ -1,13 +1,13 @@
 import { Router, type Request, type Response } from "express";
 import { prisma } from "../config/prisma";
 import { randomUUID } from "node:crypto";
-import { createBookValidation } from "../middlewares/bookBodyValidation";
+import { bodyBookValidation } from "../middlewares/bookBodyValidation";
 import { validateIncomingId } from "../middlewares/incomingIdValidation";
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
 import { NotFoundError, ServerError } from "../errors";
 import { successResponseHandler } from "../config/http/httpSuccessResponseHandler";
 import { HTTP_STATUS_CODE } from "../config/http/httpResponseHandlers";
-import type { CreateBookRequest, SearchRequest } from "../config/http/httpTypes";
+import type { UpsertBookRequest, SearchRequest } from "../config/http/httpTypes";
 import { searchBooksValidation } from "../middlewares/searchBooksValidation";
 
 export const booksRouter = Router()
@@ -68,8 +68,8 @@ booksRouter.get('/', searchBooksValidation, async (
   }
 })
 
-booksRouter.post('/new', createBookValidation, async (
-  request: CreateBookRequest,
+booksRouter.post('/new', bodyBookValidation, async (
+  request: UpsertBookRequest,
   response: Response
 ) => {
   const successHandler = successResponseHandler(response)
@@ -139,17 +139,79 @@ booksRouter.get('/:id', validateIncomingId, async (
   }
 })
 
-booksRouter.put('/:id', validateIncomingId, async (request: Request, response: Response) => {
-  console.log(request.body)
-  return response.status(200).json('Book Success')
+booksRouter.put('/:id', validateIncomingId, bodyBookValidation, async (
+  request: Request,
+  response: Response
+) => {
+  const { id } = request.params
+  const successHandler = successResponseHandler(response)
+  const errorHandler = errorResponseHandler(response)
+  
+  try {
+    const result = await prisma.book.findUnique({
+      where: {
+        id
+      }
+    })
+
+    if (!result) {
+      const notFoundError = new NotFoundError(Error('Book not found.'))
+      return errorHandler(notFoundError)
+    }
+  } catch (error) {
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
+  }
+
+  try {
+    const result = await prisma.book.update({
+      where: {
+        id
+      },
+      data: request.body
+    })
+
+    return successHandler(HTTP_STATUS_CODE.SUCCESS, result)
+  } catch (error) {
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
+  }
 })
 
-booksRouter.delete('/:id', async (request: Request, response: Response) => {
-  console.log(request.headers)
-  return response.status(200).json('Book Success')
-})
+booksRouter.delete('/:id', validateIncomingId, async (
+  request: Request<{ id: string }>,
+  response: Response
+) => {
+  const { id } = request.params
+  const successHandler = successResponseHandler(response)
+  const errorHandler = errorResponseHandler(response)
+  
+  try {
+    const result = await prisma.book.findUnique({
+      where: {
+        id
+      }
+    })
 
-booksRouter.patch('/:id', async (request: Request, response: Response) => {
-  console.log(request.body)
-  return response.status(200).json('Book Success')
+    if (!result) {
+      const notFoundError = new NotFoundError(Error('Book not found.'))
+      return errorHandler(notFoundError)
+    }
+  } catch (error) {
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
+  }
+
+  try {
+    await prisma.book.delete({
+      where: {
+        id
+      }
+    })
+    
+    return successHandler(HTTP_STATUS_CODE.NO_CONTENT)
+  } catch (error) {
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
+  }
 })

@@ -1,18 +1,18 @@
 import { useMutation } from "@tanstack/react-query"
-import { createBook } from "../services/createBook"
 import { useNotification } from "./useNotification"
+import { updateBook } from "../services/updateBook"
 
-export const useCreateBook = () => {
+export const useUpdateBook = () => {
   const { notify } = useNotification()
   return useMutation({
-    mutationKey: ['createBook'],
-    mutationFn: createBook,
+    mutationKey: ['updateBook'],
+    mutationFn: updateBook,
     onMutate: (data: unknown) => {
       console.log('On Mutate', { data })
     },
     onSuccess: (data: unknown) => {
       notify({
-        message: 'Book successfully created.',
+        message: 'Book successfully updated.',
         status: 'success'
       })
 

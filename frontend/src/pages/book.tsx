@@ -3,6 +3,9 @@ import { useCreateBook } from "../hooks/useCreateBook"
 import { useBookValidation } from "../hooks/useBookValidation"
 import { Loader } from "lucide-react"
 import type { Book as BookType } from "../types/book"
+import { useParams } from "react-router"
+import { useGetBook } from "../hooks/useGetBook"
+import { useUpdateBook } from "../hooks/useUpdateBook"
 
 const formInitialState: BookType = {
   title: '',
@@ -12,10 +15,26 @@ const formInitialState: BookType = {
 }
 
 export default function Book() {
-  const formRef = useRef<HTMLFormElement>(null)
-  const { mutate, isPending, isSuccess } = useCreateBook()
+  const { id } = useParams()
+  
+  const { data: book, isLoading } = useGetBook(id)
+
+  const {
+    mutate: createBookMutate,
+    isPending: isCreatePending,
+    isSuccess: isCreateSuccess
+  } = useCreateBook()
+
+  const {
+    mutate: updateBookMutate,
+    isPending: isUpdatePending,
+  } = useUpdateBook()
+  
   const { validateField, validateForm, errors } = useBookValidation()
-  const [bookFormData, setBookFormData] = useState<BookType>(formInitialState)
+  const [bookFormData, setBookFormData] = useState<BookType>(book ?? formInitialState)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  console.log({ book })
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = event.target.value
@@ -32,16 +51,29 @@ export default function Book() {
     event.preventDefault()
     const isValid = validateForm(bookFormData)
 
+    if (isValid && id) {
+      return updateBookMutate({ ...bookFormData, id })
+    }
+
     if (isValid) {
-      mutate({ ...bookFormData })
+      return createBookMutate({ ...bookFormData })
     }
   }
 
   useEffect(() => {
-    if (isSuccess) {
+    if (isCreateSuccess) {
       setBookFormData(formInitialState)
     }
-  }, [isPending, isSuccess])
+  }, [isCreatePending, isCreateSuccess])
+
+  useEffect(() => {
+    if (book) setBookFormData(book)
+    else setBookFormData(formInitialState)
+  }, [book, id])
+
+  if (id && isLoading) {
+    return <p>Loading...</p>
+  }
 
   return (
     <form
@@ -49,7 +81,7 @@ export default function Book() {
       onSubmit={handleSubmit}
       ref={formRef}
     >
-      <fieldset className="fieldset border-base-300 rounded-box border p-4" disabled={isPending}>
+      <fieldset className="fieldset border-base-300 rounded-box border p-4" disabled={isCreatePending}>
         <legend className="fieldset-legend">Edit / Create</legend>
 
         <label htmlFor="title" className="label">Title</label>
@@ -104,7 +136,7 @@ export default function Book() {
         {errors?.status && <span className="label text-error">{errors.status}</span>}
 
         <button type="submit" className="btn btn-neutral mt-4">
-          {isPending ? <Loader className="animate-spin" /> : "Save"}
+          {isCreatePending || isUpdatePending ? <Loader className="animate-spin" /> : "Save"}
         </button>
       </fieldset>
     </form>

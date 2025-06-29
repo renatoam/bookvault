@@ -5,7 +5,7 @@ const apiURL = import.meta.env.VITE_API_URL
 export async function customFetch<T = unknown>(
   endpoint: string,
   options: FetchOptions = {}
-): Promise<T> {
+): Promise<T | null> {
   try {
     const URL = `${apiURL}/${endpoint}`
     const response = await fetch(URL, {
@@ -27,6 +27,10 @@ export async function customFetch<T = unknown>(
       }
 
       throw errorMessage
+    }
+
+    if (response.status === 204) {
+      return null
     }
 
     return (await response.json()) as T;

@@ -211,7 +211,7 @@ function App() {
       <article id="content" className="flex-1 flex place-content-center">
         <Outlet />
       </article>
-      <footer className="footer sm:footer-horizontal footer-center bg-base-300 text-base-content p-4 mb-16">
+      <footer className="footer sm:footer-horizontal footer-center bg-base-300 text-base-content p-4 max-lg:mb-16">
         <aside>
           <p>Book Vault © {new Date().getFullYear()} - Renato Melo</p>
         </aside>

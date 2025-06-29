@@ -25,4 +25,4 @@ export interface Book {
   description?: string
 }
 
-export type CreateBookRequest = Request<unknown, unknown, Book, unknown>
+export type UpsertBookRequest = Request<unknown, unknown, Book, unknown>

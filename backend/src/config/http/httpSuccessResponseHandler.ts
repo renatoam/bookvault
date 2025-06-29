@@ -3,8 +3,8 @@ import { created, HTTP_STATUS_CODE, noContent, ok } from "./httpResponseHandlers
 
 export function successResponseHandler<T>(
   response: Response<T>
-): (code: number, data: T) => Response<T> {
-  return (code: number, data: T): Response<T> => {
+): (code: number, data?: T) => Response<T> {
+  return (code: number, data?: T): Response<T> => {
     const successResponse = ok(data)
     const createdResponse = created(data)
     const noContentResponse = noContent()
@@ -21,7 +21,7 @@ export function successResponseHandler<T>(
       case HTTP_STATUS_CODE.NO_CONTENT:
         return response
           .status(noContentResponse.statusCode)
-          .json()
+          .end()
       default:
         return response
           .status(code)

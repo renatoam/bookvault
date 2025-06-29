@@ -1,8 +1,9 @@
-import { Bookmark, BookOpenText, Check, Frown } from "lucide-react"
+import { Bookmark, BookOpenText, Check, Frown, Trash2 } from "lucide-react"
 import { Fragment, type ChangeEvent } from "react"
 import { Link, useSearchParams } from "react-router"
 import { useFindBooks } from "../hooks/useFindBooks"
 import type { Status } from "../services/findBooks"
+import { useDeleteBook } from "../hooks/useDeleteBook"
 
 const authors = [
   {
@@ -27,15 +28,29 @@ export default function Books() {
   const status = searchParams.get('status') as Status ?? undefined
   const author = searchParams.get('author') ?? undefined
   const sort = searchParams.get('sort') ?? undefined
-  const { data: books, isLoading, isError, refetch } = useFindBooks({
+  
+  const filter = {
     author,
     status,
     sort
-  })
+  }
+
+  const { data: books, isLoading, isError, refetch } = useFindBooks(filter)
+
+  const { mutate } = useDeleteBook(filter)
 
   const openModal = (id: string) => {
     const modal = document.getElementById(`detailsModal-${id}`) as HTMLDialogElement | null
     modal?.showModal()
+  }
+
+  const openDeleteBookModal = (id: string) => {
+    const question = "Are you sure you want to delete this book?"
+    const yes = confirm(question)
+    
+    if (yes) {
+      mutate(id)
+    }
   }
 
   const handleStatus = (event: ChangeEvent<HTMLInputElement>) => {
@@ -194,8 +209,8 @@ export default function Books() {
             <Fragment key={book.id}>
               <div className="card card-border bg-base-100 w-[max(96,100%)] shadow-sm min-h-60 h-fit min-w-[min(16rem,100%)] max-w-96 flex-1/6">
                 <div className="card-body">
-                  <header className="flex justify-between">
-                    <h2 className="card-title flex justify-between">{book.title}</h2>
+                  <header className="flex flex-col">
+                    <h2 className="card-title flex justify-between line-clamp-3 max-h-fit">{book.title}</h2>
                     <small className="text-xs">{book.author}</small>  
                   </header>
                   <div className="divider my-0.5"></div> 
@@ -227,9 +242,14 @@ export default function Books() {
                   <footer className="flex justify-between items-center">
                     <small className="text-xs">{book.author}</small>
                     <small className="text-xs">Press ESC key or click outside to close</small>
-                    <button className="btn btn-primary btn-xs p-0">
-                      <Link className="flex items-center h-full w-full p-2" to={`/books/${book.id}`}>Edit</Link>
-                    </button>
+                    <section id="actions" className="flex gap-2">
+                      <button className="btn btn-primary btn-xs p-0">
+                        <Link className="flex items-center h-full w-full p-2" to={`/books/${book.id}`}>Edit</Link>
+                      </button>
+                      <button className="btn btn-xs" onClick={() => openDeleteBookModal(book.id)}>
+                        <Trash2 />
+                      </button>
+                    </section>
                   </footer>
                 </div>
                 <form method="dialog" className="modal-backdrop">

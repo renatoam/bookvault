@@ -1,22 +1,24 @@
 import { useMutation } from "@tanstack/react-query"
-import { createBook } from "../services/createBook"
+import { deleteBook } from "../services/deleteBook"
 import { useNotification } from "./useNotification"
+import type { Filter } from "../services/findBooks"
+import { queryClient } from "../config/tanstack"
 
-export const useCreateBook = () => {
+export const useDeleteBook = (filter: Filter) => {
   const { notify } = useNotification()
   return useMutation({
-    mutationKey: ['createBook'],
-    mutationFn: createBook,
+    mutationKey: ['deleteBook'],
+    mutationFn: (id?: string) => deleteBook(id),
     onMutate: (data: unknown) => {
       console.log('On Mutate', { data })
     },
-    onSuccess: (data: unknown) => {
+    onSuccess: () => {
       notify({
-        message: 'Book successfully created.',
+        message: 'Book successfully deleted.',
         status: 'success'
       })
 
-      console.info({ data })
+      queryClient.invalidateQueries({ queryKey: ['books', filter] })
     },
     onError: (error: string) => {
       const index = error
@@ -32,6 +34,7 @@ export const useCreateBook = () => {
       })
 
       console.log('On error', { error })
+      queryClient.invalidateQueries({ queryKey: ['books', filter] })
     }
   })
 }
