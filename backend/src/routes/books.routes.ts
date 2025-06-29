@@ -116,9 +116,9 @@ booksRouter.get('/:id', validateIncomingId, async (
   request: Request<{ id: string }>,
   response: Response
 ) => {
+  const { id } = request.params
   const successHandler = successResponseHandler(response)
   const errorHandler = errorResponseHandler(response)
-  const { id } = request.params
   
   try {
     const result = await prisma.book.findUnique({
