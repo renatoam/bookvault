@@ -1,11 +1,31 @@
 import { Filter, Home, Menu, PawPrint, Settings } from 'lucide-react'
-import { type ChangeEvent } from 'react'
+import { useRef, type ChangeEvent, type KeyboardEvent } from 'react'
 import { Link, Outlet, useMatch, useSearchParams } from 'react-router'
 import './App.scss'
+import { queryClient } from './config/tanstack'
+import type { Status } from './services/findBooks'
 
 function App() {
-  const showFilters = useMatch('/books')
   const [searchParams, setSearchParams] = useSearchParams()
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  const status = searchParams.get('status') as Status ?? undefined
+  const author = searchParams.get('author') ?? undefined
+  const sort = searchParams.get('sort') ?? undefined
+  const page = searchParams.get('page') ?? undefined
+  const limit = searchParams.get('limit') ?? undefined
+  const q = searchParams.get('q') ?? undefined
+  
+  const initialFilter = {
+    author,
+    status,
+    sort,
+    page,
+    limit,
+    q
+  }
+
+  const showFilters = useMatch('/books')
   const drawer = searchParams.get('drawer')
 
   const handleDrawerContent = (event: ChangeEvent<HTMLInputElement>) => {
@@ -17,6 +37,17 @@ function App() {
     
     if (id === "filterDrawer") {
       setSearchParams({ drawer: 'filter' })
+    }
+  }
+
+  const executeSearch = (event: KeyboardEvent) => {
+    const key = event.key
+    const value = (event.target as HTMLInputElement).value
+
+    if (key.toLowerCase() === 'enter') {
+      setSearchParams({ q: value })
+      queryClient.invalidateQueries({ queryKey: ['books', initialFilter] })
+      if (searchRef.current) searchRef.current.value = ''
     }
   }
 
@@ -110,7 +141,7 @@ function App() {
               </div>
               <div className="flex-none">
                 <ul className="menu menu-horizontal px-1">
-                  <li><Link to="/books">My Books</Link></li>
+                  <li><Link to="/books?page=1">My Books</Link></li>
                   <li><a>Docs</a></li>
                 </ul>
               </div>
@@ -128,7 +159,13 @@ function App() {
                       <path d="m21 21-4.3-4.3"></path>
                     </g>
                   </svg>
-                  <input type="search" className="grow" placeholder="Search" />
+                  <input
+                    ref={searchRef}
+                    type="search"
+                    className="grow"
+                    placeholder="Search"
+                    onKeyDown={executeSearch}
+                  />
                   <kbd className="kbd kbd-sm">↵</kbd>
                 </label>
               </section>

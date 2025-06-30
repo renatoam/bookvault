@@ -5,12 +5,14 @@ import type { SearchRequest } from "../config/http/httpTypes";
 import { ClientError, getErrorMessage } from "../errors";
 import { statusEnum } from "./helpers";
 
+export const DEFAULT_LIMIT = 8
+
 const searchSchema = z.object({
   q: z.string().trim().max(100).optional().default(''),
   author: z.string().trim().max(100).optional().default(''),
   status: statusEnum.optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(DEFAULT_LIMIT),
   sort: z.string().regex(/^(title|author|status):(asc|desc)$/i).optional().default('title:asc')
 });
 

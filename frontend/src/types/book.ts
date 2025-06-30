@@ -6,4 +6,9 @@ export interface Book {
   description: string
 }
 
-export type Books = Required<Book>[]
+export interface Books {
+  content: Required<Book>[],
+  page: number
+  resultsPerPage: number
+  totalResults: number
+}

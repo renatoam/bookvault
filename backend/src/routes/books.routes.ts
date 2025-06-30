@@ -8,7 +8,7 @@ import { NotFoundError, ServerError } from "../errors";
 import { successResponseHandler } from "../config/http/httpSuccessResponseHandler";
 import { HTTP_STATUS_CODE } from "../config/http/httpResponseHandlers";
 import type { UpsertBookRequest, SearchRequest } from "../config/http/httpTypes";
-import { searchBooksValidation } from "../middlewares/searchBooksValidation";
+import { DEFAULT_LIMIT, searchBooksValidation } from "../middlewares/searchBooksValidation";
 
 export const booksRouter = Router()
 
@@ -16,7 +16,6 @@ booksRouter.get('/', searchBooksValidation, async (
   request: SearchRequest,
   response: Response
 ) => {
-  const DEFAULT_LIMIT = 20
   const errorHandler = errorResponseHandler(response)
   const successHandler = successResponseHandler(response)
   const {
@@ -28,6 +27,8 @@ booksRouter.get('/', searchBooksValidation, async (
     orderBy
   } = request.query
   let where
+
+  console.log({ page, limit })
 
   if (q) {
     where = {
@@ -47,12 +48,15 @@ booksRouter.get('/', searchBooksValidation, async (
   }
 
   try {
-    const data = await prisma.book.findMany({
-      where,
-      skip: page ? ((page - 1) * (limit ?? DEFAULT_LIMIT) ): undefined,
-      take: page ? Number(limit ?? DEFAULT_LIMIT) : DEFAULT_LIMIT,
-      orderBy: orderBy ? { [orderBy.field]: orderBy?.order } : undefined
-    })
+    const [data, totalResults] = await Promise.all([
+      prisma.book.findMany({
+        where,
+        skip: page ? ((page - 1) * (limit ?? DEFAULT_LIMIT) ): undefined,
+        take: page ? Number(limit ?? DEFAULT_LIMIT) : DEFAULT_LIMIT,
+        orderBy: orderBy ? { [orderBy.field]: orderBy?.order } : undefined
+      }),
+      prisma.book.count({ where })
+    ])
     
     if (!data) {
       const serverError = new ServerError(
@@ -61,7 +65,14 @@ booksRouter.get('/', searchBooksValidation, async (
       return errorHandler(serverError)
     }
 
-    return successHandler(HTTP_STATUS_CODE.SUCCESS, data)
+    const result = {
+      content: data,
+      page,
+      resultsPerPage: limit,
+      totalResults
+    }
+
+    return successHandler(HTTP_STATUS_CODE.SUCCESS, result)
   } catch (error) {
     const serverError = new ServerError(error as Error)
     return errorHandler(serverError)

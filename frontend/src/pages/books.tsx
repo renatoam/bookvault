@@ -28,16 +28,43 @@ export default function Books() {
   const status = searchParams.get('status') as Status ?? undefined
   const author = searchParams.get('author') ?? undefined
   const sort = searchParams.get('sort') ?? undefined
+  const page = searchParams.get('page') ? Number(searchParams.get('page')) : undefined
+  const limit = searchParams.get('limit') ? Number(searchParams.get('limit')) : undefined
+  const q = searchParams.get('q') ?? undefined
   
   const filter = {
     author,
     status,
-    sort
+    sort,
+    page,
+    limit,
+    q
   }
 
-  const { data: books, isLoading, isError, refetch } = useFindBooks(filter)
+  const { data, isLoading, isError, refetch } = useFindBooks(filter)
+  const { content: books, page: currentPage, resultsPerPage, totalResults } = data ?? {}
+  const totalPages = (totalResults && resultsPerPage) &&
+    Math.round(totalResults / resultsPerPage)
+  const shouldDisableNextPage = currentPage === totalPages
+  const shouldDisablePrevPage = !currentPage || currentPage === 1
 
   const { mutate } = useDeleteBook(filter)
+
+  const handlePreviousPage = () => {
+    if (shouldDisablePrevPage) return
+
+    const previous = String(currentPage - 1)
+    setSearchParams({ page: previous })
+  }
+
+  const handleNextPage = () => {
+    if (!totalResults || !resultsPerPage || !currentPage) return
+    
+    if (shouldDisableNextPage) return
+    
+    const next = String(currentPage + 1)
+    setSearchParams({ page: next })
+  }
 
   const openModal = (id: string) => {
     const modal = document.getElementById(`detailsModal-${id}`) as HTMLDialogElement | null
@@ -141,7 +168,14 @@ export default function Books() {
   }
 
   return (
-    <section className="flex flex-col max-w-11/12 my-8">
+    <section className="flex flex-col max-w-11/12 my-8 items-end">
+      <header id="paginationTop" className="my-4">
+        <div className="join">
+          <button className="join-item btn" disabled={shouldDisablePrevPage} onClick={handlePreviousPage}>«</button>
+          <button className="join-item btn">Page {currentPage}</button>
+          <button className="join-item btn" disabled={shouldDisableNextPage} onClick={handleNextPage}>»</button>
+        </div>
+      </header>
       <section className="flex gap-4 items-start justify-between flex-wrap">
         <aside id="filter" className="hidden lg:block min-w-48">
           <fieldset>
@@ -260,6 +294,13 @@ export default function Books() {
           ))}
         </article>
       </section>
+      <footer id="pagination" className="my-4">
+        <div className="join">
+          <button className="join-item btn" disabled={shouldDisablePrevPage} onClick={handlePreviousPage}>«</button>
+          <button className="join-item btn">Page {currentPage}</button>
+          <button className="join-item btn" disabled={shouldDisableNextPage} onClick={handleNextPage}>»</button>
+        </div>
+      </footer>
     </section>
   )
 }

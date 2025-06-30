@@ -82,7 +82,7 @@ export default function Book() {
       ref={formRef}
     >
       <fieldset className="fieldset border-base-300 rounded-box border p-4" disabled={isCreatePending}>
-        <legend className="fieldset-legend">Edit / Create</legend>
+        <legend className="fieldset-legend">{id ? "Edit" : "Create"}</legend>
 
         <label htmlFor="title" className="label">Title</label>
         <input

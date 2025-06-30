@@ -12,13 +12,15 @@ export interface Filter {
   sort?: string
 }
 
-export const findBooks = async (filter: Filter): Promise<Books> => {
+export const findBooks = async (filter: Filter): Promise<Books | null> => {
   let params = ''
 
-  params = Object.entries(filter)
-  .filter(([, value]) => value !== undefined && value !== null)
-  .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
-  .join('&');
+  if (filter) {
+    params = Object.entries(filter)
+      .filter(([, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
+      .join('&')
+  }
 
   return customFetch<Books>(`books?${params}`)
 }
