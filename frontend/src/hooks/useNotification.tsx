@@ -1,5 +1,5 @@
 import toast from "react-hot-toast"
-import type { NotifyProps } from "../components/Alert"
+import type { NotifyProps } from "../components/Alert/alert.root"
 import { Alert } from "../components"
 
 export const useNotification = () => {
