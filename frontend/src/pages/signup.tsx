@@ -1,3 +1,5 @@
+import { CustomButton, CustomForm, CustomInput } from "../components";
+
 export default function SignUp() {
   return (
     <div className="hero bg-base-200 min-h-screen">
@@ -9,20 +11,30 @@ export default function SignUp() {
             quasi. In deleniti eaque aut repudiandae et a id nisi.
           </p>
         </div>
-        <div className="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
-          <div className="card-body">
-            <fieldset className="fieldset">
-              <label className="label">Email</label>
-              <input type="email" className="input" placeholder="Email" />
-              <label className="label">Password</label>
-              <input type="password" className="input" placeholder="Password" />
-              <label className="label">Confirm Password</label>
-              <input type="confirmPassword" className="input" placeholder="Confirm Password" />
-              <p className="label">Passwords must be equal</p>
-              <button className="btn btn-neutral mt-4">Sign up</button>
-            </fieldset>
-          </div>
-        </div>
+        <CustomForm legend="Register">
+          <CustomInput
+            label="Email"
+            type="email"
+            className="input w-full"
+            placeholder="Email"
+          />
+          
+          <CustomInput
+            label="Password"
+            type="password"
+            className="input w-full"
+            placeholder="Password"
+          />
+          
+          <CustomInput
+            label="Confirm Password"
+            type="confirmPassword"
+            className="input w-full"
+            placeholder="Confirm Password"
+          />
+          
+          <CustomButton className="btn btn-neutral mt-4">Sign up</CustomButton>
+        </CustomForm>
       </div>
     </div>
   )

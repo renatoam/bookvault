@@ -5,11 +5,13 @@ import pino from "pino-http";
 import { limiter } from "./config/rateLimit";
 import { app } from "./config/server";
 import { router } from "./routes";
+import cookieParser from 'cookie-parser'
 
 app.use(helmet());
 app.use(pino());
 app.use(cors());
 app.use(json())
+app.use(cookieParser())
 
 app.use('/v1', router)
 

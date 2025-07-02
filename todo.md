@@ -20,18 +20,18 @@
 📌 Middlewares
  [x] Criar middleware de Error Handling global
 
- [] Criar middleware para validar payloads (ex: com Zod)
+ [x] Criar middleware para validar payloads (ex: com Zod)
 
 📌 CRUD de Books (Rotas REST)
- [] GET /books → Listar livros
+ [x] GET /books → Listar livros
 
- [] GET /books/:id → Detalhe de um livro
+ [x] GET /books/:id → Detalhe de um livro
 
- [] POST /books → Criar livro
+ [x] POST /books → Criar livro
 
- [] PUT /books/:id → Atualizar livro
+ [x] PUT /books/:id → Atualizar livro
 
- [] DELETE /books/:id → Remover livro
+ [x] DELETE /books/:id → Remover livro
 
 📌 Auth (Story 2 do desafio)
  [] Criar User no Prisma Schema
@@ -55,39 +55,39 @@
 
 🟢 FRONTEND - React + Vite + Tailwind + DaisyUI
 📌 Setup Inicial
- [] Garantir Tailwind + DaisyUI funcionando
+ [x] Garantir Tailwind + DaisyUI funcionando
 
- [] Criar Service Layer para comunicação com a API (ex: axios ou fetch wrappers)
+ [x] Criar Service Layer para comunicação com a API (ex: axios ou fetch wrappers)
 
- [] Configurar React Query (com QueryClient)
+ [x] Configurar React Query (com QueryClient)
 
 📌 Pages / Routes
  [] /login → Form de login
 
- [] /books → Listagem de livros
+ [x] /books → Listagem de livros
 
- [] /books/new → Formulário de criação
+ [x] /books/new → Formulário de criação
 
- [] /books/:id → Detalhe + botão de delete ou edit
+ [x] /books/:id → Detalhe + botão de delete ou edit
 
- [] /books/:id/edit → Formulário de edição (pode reusar o mesmo do create)
+ [x] /books/:id/edit → Formulário de edição (pode reusar o mesmo do create)
 
 📌 State & React Query
  [] Criar hook para autenticação (com Context API ou Zustand)
 
  Queries:
 
- [] Buscar lista de books
+ [x] Buscar lista de books
 
- [] Buscar detalhe de book
+ [x] Buscar detalhe de book
 
  Mutations:
 
- [] Criar book
+ [x] Criar book
 
- [] Editar book
+ [x] Editar book
 
- [] Deletar book
+ [x] Deletar book
 
  [] Login / Signup
 
@@ -96,9 +96,9 @@
 
  [] Criar error boundaries ou mensagens de erro
 
- [] Formulários com validação (Zod + React Hook Form ou só State manual mesmo)
+ [x] Formulários com validação (Zod + React Hook Form ou só State manual mesmo)
 
- [] Toast de sucesso / erro (DaisyUI Toast ou lib leve como Sonner)
+ [x] Toast de sucesso / erro (DaisyUI Toast ou lib leve como Sonner)
 
 📌 Bonus Points (Se Sobrar Tempo)
  [] Optimistic UI para criar/editar/deletar livros
