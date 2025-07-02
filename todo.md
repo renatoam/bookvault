@@ -1,108 +1,97 @@
-🟢 BACKEND - API (Node + Prisma + Express)
+# 📝 Unified Task List
 
-📌 Setup Inicial
+## Backend
 
- [x] Finalizar configuração de linters/formatters (Biome, etc)
+### Setup & Architecture
+- [x] Finalize linters/formatters (Biome, etc)
+- [x] Ensure clear folder structure (`src/config`, `src/routes`, `src/controllers`, `src/services`, `src/middlewares`, `src/utils`)
+- [ ] Create `.env.example` with all required environment variables (including `DATABASE_URL`)
+- [ ] Refactor backend to use a mix of Vertical Slice and Clean Architecture
 
- [] Criar arquivo .env.example com as envs necessárias (incluindo DB_URL)
+### Prisma & Database
+- [x] Model main entity: Book (fields: id, title, author, publishedAt, description, createdAt, updatedAt)
+- [x] Create initial migration
+- [x] Generate Prisma Client
+- [x] Add User model to Prisma schema
+- [ ] Migrations + Seed (create a test user)
+- [ ] Initial seed for Books (`prisma/seed.ts`)
 
- [x] Garantir estrutura clara de pastas: src/config, src/routes, src/controllers, src/services, src/middlewares, src/utils
+### Authentication
+- [x] Implement JWT Auth flow (signup, login)
+- [x] Create route protection middleware
+- [x] Protect Book routes (only authenticated users can create/delete)
+- [x] Implement refresh token with httpOnly cookie
+- [x] Implement logout (delete refresh token, clear cookie)
+- [ ] Implement rate limiting (e.g., Express Rate Limit)
+- [ ] Implement `/me` endpoint for user info
 
-📌 Prisma + DB
- [x] Modelar entidade principal: Book
+### Book CRUD (REST)
+- [x] GET /books → List books
+- [x] GET /books/:id → Book details
+- [x] POST /books → Create book
+- [x] PUT /books/:id → Update book
+- [x] DELETE /books/:id → Delete book
 
-[x] Campos: id, title, author, publishedAt, description, createdAt, updatedAt
+### Search & Autocomplete
+- [ ] Implement autocomplete endpoint for book search
+- [ ] Cache autocomplete results with Redis
+- [ ] Cache book search results with Redis
 
- [x] Criar migration (npx prisma migrate dev --name init)
+### Async & Messaging
+- [ ] Integrate RabbitMQ for async tasks (e.g., email sending)
+- [ ] Move email sending to queue/worker
 
- [x] Gerar Prisma Client (npx prisma generate)
+### Testing & Documentation
+- [ ] Unit tests (Vitest)
+- [ ] API documentation (Swagger/OpenAPI)
+- [ ] Health checks and basic metrics
 
-📌 Middlewares
- [x] Criar middleware de Error Handling global
+---
 
- [x] Criar middleware para validar payloads (ex: com Zod)
+## Frontend
 
-📌 CRUD de Books (Rotas REST)
- [x] GET /books → Listar livros
+### Setup & Architecture
+- [x] Tailwind CSS + DaisyUI working
+- [x] Service layer for API communication (fetch/axios wrappers)
+- [x] Configure React Query (TanStack)
+- [ ] Refactor frontend to use feature-based (vertical slice) structure
+- [ ] Memoize and use lazy loading for components/pages
 
- [x] GET /books/:id → Detalhe de um livro
+### Pages & Routing
+- [x] /login → Login form
+- [x] /books → Book list
+- [x] /books/new → Create book form
+- [x] /books/:id → Book details (+ delete/edit buttons)
+- [x] /books/:id/edit → Edit book form (reuse create form)
+- [ ] Implement protected routes (PrivateRoot) for authenticated pages
 
- [x] POST /books → Criar livro
+### State & Data Fetching
+- [x] Auth hook (Context API or Zustand)
+- [x] Fetch book list
+- [x] Fetch book details
+- [x] Create book
+- [x] Edit book
+- [x] Delete book
+- [ ] Login / Signup mutations
 
- [x] PUT /books/:id → Atualizar livro
+### UI & UX
+- [x] Forms with validation (Zod + React Hook Form)
+- [x] Success/error toasts (DaisyUI Toast or Sonner)
+- [ ] Loading states (Skeletons/Spinners)
+- [ ] Error boundaries or error messages
+- [ ] Optimistic UI for create/edit/delete
+- [ ] Autocomplete in book search
 
- [x] DELETE /books/:id → Remover livro
+### Testing & Documentation
+- [ ] Component tests (React Testing Library)
+- [ ] Quick API/setup documentation in README
 
-📌 Auth (Story 2 do desafio)
- [] Criar User no Prisma Schema
+---
 
- [] Migrations + Seed (criar um user de teste)
-
- [] Criar JWT Auth flow (signup, login)
-
- [] Criar middleware de proteção de rotas
-
- [] Proteger rotas de Book (ex.: apenas usuários autenticados podem criar ou deletar livros)
-
-📌 Extra (Opcional, se tiver tempo)
- [] Rate limiting (ex.: Express Rate Limit)
-
- [] Unit tests (Vitest)
-
- [] Swagger ou outro esquema de API docs
-
- [] Seed inicial de Books (prisma/seed.ts)
-
-🟢 FRONTEND - React + Vite + Tailwind + DaisyUI
-📌 Setup Inicial
- [x] Garantir Tailwind + DaisyUI funcionando
-
- [x] Criar Service Layer para comunicação com a API (ex: axios ou fetch wrappers)
-
- [x] Configurar React Query (com QueryClient)
-
-📌 Pages / Routes
- [] /login → Form de login
-
- [x] /books → Listagem de livros
-
- [x] /books/new → Formulário de criação
-
- [x] /books/:id → Detalhe + botão de delete ou edit
-
- [x] /books/:id/edit → Formulário de edição (pode reusar o mesmo do create)
-
-📌 State & React Query
- [] Criar hook para autenticação (com Context API ou Zustand)
-
- Queries:
-
- [x] Buscar lista de books
-
- [x] Buscar detalhe de book
-
- Mutations:
-
- [x] Criar book
-
- [x] Editar book
-
- [x] Deletar book
-
- [] Login / Signup
-
-📌 UI + UX
- [] Criar loading states com Skeleton ou Spinners
-
- [] Criar error boundaries ou mensagens de erro
-
- [x] Formulários com validação (Zod + React Hook Form ou só State manual mesmo)
-
- [x] Toast de sucesso / erro (DaisyUI Toast ou lib leve como Sonner)
-
-📌 Bonus Points (Se Sobrar Tempo)
- [] Optimistic UI para criar/editar/deletar livros
-
- [] Testes com React Testing Library
-
- [] Documentação rápida de API e setup no README
+## DevOps & Observability
+- [ ] Add initial CI/CD (lint, test, deploy)
+- [ ] Add logging (Winston/Pino)
+- [ ] Add error monitoring (Sentry)
+- [ ] Add feature flags (if needed)
+- [ ] Add i18n (if needed)
+- [ ] Add accessibility improvements (a11y)

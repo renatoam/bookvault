@@ -28,8 +28,6 @@ booksRouter.get('/', searchBooksValidation, async (
   } = request.query
   let where
 
-  console.log({ page, limit })
-
   if (q) {
     where = {
       OR: [
@@ -38,6 +36,13 @@ booksRouter.get('/', searchBooksValidation, async (
       ]
     }
   }
+
+  // const books = await prisma.$queryRaw`
+  //   SELECT * FROM "Book"
+  //   WHERE similarity(title, ${q}) > 0.3
+  //   ORDER BY similarity(title, ${q}) DESC
+  //   LIMIT 20
+  // `;
 
   if (author) {
     where = { ...where, author }
