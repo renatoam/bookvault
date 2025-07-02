@@ -9,7 +9,10 @@ import cookieParser from 'cookie-parser'
 
 app.use(helmet());
 app.use(pino());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173'],
+  credentials: true
+}));
 app.use(json())
 app.use(cookieParser())
 

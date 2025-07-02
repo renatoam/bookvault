@@ -193,6 +193,41 @@ authRouter.post('/signup', signUpBodyValidation, async (
   }
 })
 
+authRouter.post('/signout', authenticate, async (
+  request: Request,
+  response: Response
+) => {
+  const successHandler = successResponseHandler(response)
+  const errorHandler = errorResponseHandler(response)
+  const { id } = request.body
+  const { refresh_token } = request.cookies
+
+  try {
+    await prisma.refreshToken.deleteMany({
+      where: {
+        AND: [
+          {
+            userId: id,
+            token: refresh_token
+          }
+        ]
+      }
+    })
+
+    response.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      path: '/auth/refresh',
+    })
+
+    return successHandler(HTTP_STATUS_CODE.NO_CONTENT)
+  } catch (error) {
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
+  }
+})
+
 authRouter.post('/refresh', async (request: Request, response: Response) => {
   const errorHandler = errorResponseHandler(response)
   const successHandler = successResponseHandler(response)

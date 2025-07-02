@@ -1,6 +1,8 @@
 import { createBrowserRouter } from "react-router";
 import App from "../App";
 import { Home, Books, Book, SignUp, Forgot, Signin } from "../pages";
+import PrivateRoot from "../pages/privateRoot";
+import ResetPassword from "../pages/reset";
 
 export const router = createBrowserRouter([
   {
@@ -12,30 +14,35 @@ export const router = createBrowserRouter([
         Component: Home,
       },
       {
-        path: "books",
+        Component: PrivateRoot,
         children: [
           {
-            index: true,
-            Component: Books,
+            path: "books",
+            children: [
+              {
+                index: true,
+                Component: Books,
+              },
+              {
+                path: ":id",
+                Component: Book,
+              },
+              {
+                path: "new",
+                Component: Book,
+              },
+            ]
           },
           {
-            path: ":id",
+            path: "profile",
             Component: Book,
           },
           {
-            path: "new",
+            path: "docs",
             Component: Book,
           },
         ]
-      },
-      {
-        path: "profile",
-        Component: Book,
-      },
-      {
-        path: "docs",
-        Component: Book,
-      },
+      }
     ],
   },
   {
@@ -47,7 +54,11 @@ export const router = createBrowserRouter([
     Component: Signin,
   },
   {
-    path: "forgot",
+    path: "forgot-password",
     Component: Forgot,
+  },
+  {
+    path: "reset-password",
+    Component: ResetPassword,
   },
 ]);

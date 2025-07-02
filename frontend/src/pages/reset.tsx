@@ -1,16 +1,12 @@
-import { useForm } from "react-hook-form";
-import { CustomButton, CustomForm, CustomInput } from "../components";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSignUp } from "../hooks/useSignUp";
-import type { SignUpBody } from "../services/signup";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { CustomButton, CustomForm, CustomInput } from "../components";
+import { useResetPassword } from "../hooks/useResetPassword";
+import type { ResetPasswordBody } from "../services/resetPassword";
+import { useSearchParams } from "react-router";
 
-const signUpSchema = z.object({
-  email: z
-    .string()
-    .email("Invalid email address")
-    .max(100, "Email must be at most 100 characters")
-    .trim(),
+const resetSchema = z.object({
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -27,42 +23,30 @@ const signUpSchema = z.object({
   path: ["confirmPassword"],
 });
 
-export default function SignUp() {
-  const { mutate, isPending } = useSignUp()
+export default function ResetPassword() {
+  const { mutate, isPending } = useResetPassword()
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token')
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(signUpSchema),
+    resolver: zodResolver(resetSchema),
     mode: 'onBlur'
   })
 
-  const onSubmit = (data: SignUpBody) => {
-    mutate(data)
+  const onSubmit = (data: ResetPasswordBody) => {
+    mutate({
+      ...data,
+      token
+    })
   }
 
   return (
     <div className="hero bg-base-200 min-h-screen">
       <div className="hero-content flex-col lg:flex-row-reverse">
-        <div className="text-center lg:text-left">
-          <h1 className="text-5xl font-bold">Sign Up now!</h1>
-          <p className="py-6">
-            Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem
-            quasi. In deleniti eaque aut repudiandae et a id nisi.
-          </p>
-        </div>
-        <CustomForm legend="Register" onSubmit={handleSubmit(onSubmit)} disabled={isPending}>
-          <CustomInput
-            label="Email"
-            type="email"
-            id="email"
-            className="input w-full"
-            placeholder="Email"
-            {...register('email')}
-            error={errors.email?.message}
-          />
-          
+        <CustomForm legend="Reset Password" onSubmit={handleSubmit(onSubmit)} disabled={isPending}>          
           <CustomInput
             label="Password"
             type="password"
@@ -83,7 +67,7 @@ export default function SignUp() {
             error={errors.confirmPassword?.message}
           />
           
-          <CustomButton isLoading={isPending} className="btn btn-neutral mt-4">Sign up</CustomButton>
+          <CustomButton isLoading={isPending} className="btn btn-neutral mt-4">Reset</CustomButton>
         </CustomForm>
       </div>
     </div>

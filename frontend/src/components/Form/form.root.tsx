@@ -8,9 +8,9 @@ const CustomForm = forwardRef((
   const { legend, children, disabled, ...rest } = props
   return (
     <form
+      {...rest}
       className="space-y-4 m-auto w-lg"
       ref={ref}
-      {...rest}
     >
       <fieldset className="fieldset border-base-300 rounded-box border p-4" disabled={disabled}>
         <legend className="fieldset-legend">{legend}</legend>

@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express"
 import { jwtVerify } from "jose"
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
-import { UnauthorizedError } from "../errors"
+import { ServerError, UnauthorizedError } from "../errors"
 
 export const authenticate = async (
   request: Request,
@@ -20,10 +20,18 @@ export const authenticate = async (
   }
 
   const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-  const { payload } = await jwtVerify(token, secret)
+  let userId = null
+  
+  try {
+    const { payload } = await jwtVerify(token, secret)
+    userId = payload.sub
+  } catch (error) {
+    const serverError = new ServerError(error as Error)
+    return errorHandler(serverError)
+  }
 
   request.body = {
-    id: payload.sub,
+    id: userId,
     secret
   }
 

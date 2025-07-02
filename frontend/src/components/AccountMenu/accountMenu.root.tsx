@@ -1,7 +1,15 @@
 import { UserCircle2 } from "lucide-react";
 import { Link } from "react-router";
+import { useSignOut } from "../../hooks/useSignOut";
+import { CustomButton } from "../Button";
 
 export default function AccountMenu() {
+  const { mutate } = useSignOut()
+
+  const logout = () => {
+    mutate()
+  }
+
   return (
     <>
       <button className="btn btn-ghost btn-circle avatar">
@@ -16,7 +24,9 @@ export default function AccountMenu() {
           </Link>
         </li>
         <li className="btn btn-sm btn-block btn-ghost justify-start"><Link to="#">Settings</Link></li>
-        <li className="btn btn-sm btn-block btn-ghost justify-start"><Link to="#">Logout</Link></li>
+        <li className="btn btn-sm btn-block btn-ghost justify-start">
+          <CustomButton onClick={logout}>Logout</CustomButton>
+        </li>
       </ul>
     </>
   )
