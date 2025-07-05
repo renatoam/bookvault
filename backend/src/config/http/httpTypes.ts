@@ -25,7 +25,11 @@ export interface Book {
   description?: string
 }
 
-export type UpsertBookRequest = Request<unknown, unknown, Book, unknown>
+export interface UpsertBookParams {
+  id?: string
+}
+
+export type UpsertBookRequest = Request<UpsertBookParams, unknown, Book, unknown>
 
 interface SignUpBody {
   email: string
