@@ -1,6 +1,6 @@
 import { type Request, type Response, type NextFunction } from "express"
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
-import { ClientError, getErrorMessage } from "../errors"
+import { ClientError, getErrorMessage } from "../core/errors"
 import { z } from "zod"
 
 const schema = z.object({

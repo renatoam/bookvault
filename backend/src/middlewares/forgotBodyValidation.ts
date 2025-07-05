@@ -1,12 +1,13 @@
 import { z } from "zod"
 import type { NextFunction, Request, Response } from "express"
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
-import { ClientError, getErrorMessage } from "../errors"
+import { ClientError, getErrorMessage } from "../core/errors"
+import * as constants from "../core/constants"
 
 export const forgotSchema = z.object({
   email: z
     .string()
-    .email("Invalid email address")
+    .email(constants.INVALID_EMAIL_MESSAGE)
     .trim()
 })
 

@@ -1,14 +1,13 @@
 import { Router, type Request, type Response } from "express";
 import { prisma } from "../config/prisma";
 import { randomUUID } from "node:crypto";
-import { bodyBookValidation } from "../middlewares/bookBodyValidation";
-import { validateIncomingId } from "../middlewares/incomingIdValidation";
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
-import { NotFoundError, ServerError } from "../errors";
+import { NotFoundError, ServerError } from "../core/errors";
 import { successResponseHandler } from "../config/http/httpSuccessResponseHandler";
 import { HTTP_STATUS_CODE } from "../config/http/httpResponseHandlers";
 import type { UpsertBookRequest, SearchRequest } from "../config/http/httpTypes";
-import { DEFAULT_LIMIT, searchBooksValidation } from "../middlewares/searchBooksValidation";
+import * as constants from "../core/constants";
+import { searchBooksValidation, bodyBookValidation, validateIncomingId } from "../middlewares";
 
 export const booksRouter = Router()
 
@@ -56,8 +55,8 @@ booksRouter.get('/', searchBooksValidation, async (
     const [data, totalResults] = await Promise.all([
       prisma.book.findMany({
         where,
-        skip: page ? ((page - 1) * (limit ?? DEFAULT_LIMIT) ): undefined,
-        take: page ? Number(limit ?? DEFAULT_LIMIT) : DEFAULT_LIMIT,
+        skip: page ? ((page - 1) * (limit ?? constants.DEFAULT_LIMIT) ): undefined,
+        take: page ? Number(limit ?? constants.DEFAULT_LIMIT) : constants.DEFAULT_LIMIT,
         orderBy: orderBy ? { [orderBy.field]: orderBy?.order } : undefined
       }),
       prisma.book.count({ where })
@@ -65,7 +64,7 @@ booksRouter.get('/', searchBooksValidation, async (
     
     if (!data) {
       const serverError = new ServerError(
-        Error('Something went wrong when retrieving books.')
+        Error(constants.SOMETHING_WENT_WRONG_MESSAGE)
       )
       return errorHandler(serverError)
     }
@@ -144,7 +143,7 @@ booksRouter.get('/:id', validateIncomingId, async (
     })
 
     if (!result) {
-      const notFoundError = new NotFoundError(Error('Book not found.'))
+      const notFoundError = new NotFoundError(Error(constants.BOOK_NOT_FOUND_MESSAGE))
       return errorHandler(notFoundError)
     }
 
@@ -171,7 +170,7 @@ booksRouter.put('/:id', validateIncomingId, bodyBookValidation, async (
     })
 
     if (!result) {
-      const notFoundError = new NotFoundError(Error('Book not found.'))
+      const notFoundError = new NotFoundError(Error(constants.BOOK_NOT_FOUND_MESSAGE))
       return errorHandler(notFoundError)
     }
   } catch (error) {
@@ -210,7 +209,7 @@ booksRouter.delete('/:id', validateIncomingId, async (
     })
 
     if (!result) {
-      const notFoundError = new NotFoundError(Error('Book not found.'))
+      const notFoundError = new NotFoundError(Error(constants.BOOK_NOT_FOUND_MESSAGE))
       return errorHandler(notFoundError)
     }
   } catch (error) {

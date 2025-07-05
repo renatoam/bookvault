@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from "express"
 import { jwtVerify } from "jose"
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
-import { ServerError, UnauthorizedError } from "../errors"
+import { ServerError, UnauthorizedError } from "../core/errors"
+import * as constants from "../core/constants"
 
 export const authenticate = async (
   request: Request,
@@ -14,7 +15,7 @@ export const authenticate = async (
 
   if (!authorization || !token || !authorization.startsWith('Bearer ')) {
     const unauthorizedError = new UnauthorizedError(
-      Error('Invalid or missing token')
+      Error(constants.INVALID_OR_MISSING_TOKEN_MESSAGE)
     )
     return errorHandler(unauthorizedError)
   }

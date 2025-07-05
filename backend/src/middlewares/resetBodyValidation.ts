@@ -1,26 +1,27 @@
 import { z } from "zod";
 import type { NextFunction, Request, Response } from "express"
 import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
-import { ClientError, getErrorMessage } from "../errors";
+import { ClientError, getErrorMessage } from "../core/errors";
+import * as constants from "../core/constants"
 
 export const resetSchema = z.object({
   token:
     z.string()
-    .min(64, "Reset token must be at least 64 characters."),
+    .min(64, constants.RESET_TOKEN_MIN_LENGTH_MESSAGE),
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(100, "Password must be at most 100 characters")
-    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-    .regex(/\d/, "Password must contain at least one number")
-    .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+    .min(8, constants.PASSWORD_MIN_LENGTH_MESSAGE)
+    .max(100, constants.PASSWORD_MAX_LENGTH_MESSAGE)
+    .regex(/[A-Z]/, constants.PASSWORD_UPPERCASE_LETTER_MESSAGE)
+    .regex(/[a-z]/, constants.PASSWORD_LOWERCASE_LETTER_MESSAGE)
+    .regex(/\d/, constants.PASSWORD_NUMBER_MESSAGE)
+    .regex(/[^A-Za-z0-9]/, constants.PASSWORD_SPECIAL_CHARACTER_MESSAGE),
   confirmPassword: z
     .string()
-    .min(8, "Confirm password must be at least 8 characters"),
+    .min(8, constants.CONFIRM_PASSWORD_MIN_LENGTH_MESSAGE),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
+  message: constants.PASSWORDS_DO_NOT_MATCH_MESSAGE,
+  path: [constants.CONFIRM_PASSWORD_PATH],
 });
 
 export const resetBodyValidation = async (

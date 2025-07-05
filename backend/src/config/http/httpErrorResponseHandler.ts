@@ -1,5 +1,5 @@
 import { type Response } from "express"
-import type { ErrorBody } from "../../errors"
+import type { ErrorBody } from "../../core/errors"
 import {
   badRequest,
   conflict,

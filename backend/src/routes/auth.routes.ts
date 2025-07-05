@@ -7,21 +7,15 @@ import { HTTP_STATUS_CODE } from "../config/http/httpResponseHandlers";
 import { successResponseHandler } from "../config/http/httpSuccessResponseHandler";
 import type { ResetPasswordRequest, SignInRequest, SignUpRequest } from "../config/http/httpTypes";
 import { prisma } from "../config/prisma";
-import { ConflictError, ForbiddenError, NotFoundError, ServerError, UnauthorizedError } from "../errors";
-import { authenticate } from "../middlewares/authenticate";
-import { forgotBodyValidation } from "../middlewares/forgotBodyValidation";
-import { resetBodyValidation } from "../middlewares/resetBodyValidation";
-import { signInBodyValidation } from "../middlewares/signInBodyValidation";
-import { signUpBodyValidation } from "../middlewares/signUpBodyValidation";
+import { ConflictError, ForbiddenError, NotFoundError, ServerError, UnauthorizedError } from "../core/errors";
 import { Resend } from "resend";
+import * as constants from "../core/constants";
+import { signInBodyValidation, signUpBodyValidation, authenticate, forgotBodyValidation, resetBodyValidation } from "../middlewares";
 
 export const authRouter = Router()
 
-const MAX_AGE = 1000 * 60 * 60 * 24 * 7
-const AVG_AGE = 1000 * 60 * 15
-
 authRouter.get('/health', async (request: Request, response: Response) => {
-  console.log(request.headers)
+  console.log(request.cookies)
   return response.status(200).json('Check success')
 })
 
@@ -43,7 +37,7 @@ authRouter.post('/signin', signInBodyValidation, async (
 
     if (!user) {
       const notFoundError = new NotFoundError(
-        Error("User not found.")
+        Error(constants.USER_NOT_FOUND_MESSAGE)
       )
       return errorHandler(notFoundError)
     }
@@ -65,7 +59,7 @@ authRouter.post('/signin', signInBodyValidation, async (
 
     if (!isPasswordValid) {
       const unauthorizedError = new UnauthorizedError(
-        Error('Invalid password.')
+        Error(constants.INVALID_PASSWORD_MESSAGE)
       )
       return errorHandler(unauthorizedError)
     }
@@ -75,7 +69,7 @@ authRouter.post('/signin', signInBodyValidation, async (
       user: nonSensitiveUserData,
       auth: {
         accessToken,
-        expiresIn: AVG_AGE
+        expiresIn: constants.AVG_AGE
       }
     }
 
@@ -84,7 +78,7 @@ authRouter.post('/signin', signInBodyValidation, async (
     const refreshTokenOpaque = randomBytes(48).toString('hex')
     const { token: refreshToken } = await prisma.refreshToken.create({
       data: {
-        expiresAt: new Date(Date.now() + MAX_AGE),
+        expiresAt: new Date(Date.now() + constants.MAX_AGE),
         token: refreshTokenOpaque,
         createdAt: new Date(Date.now()),
         ipAddress,
@@ -93,12 +87,12 @@ authRouter.post('/signin', signInBodyValidation, async (
       }
     })
 
-    response.cookie('refresh_token', refreshToken, {
+    response.cookie(constants.REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      path: '/auth/refresh',
-      maxAge: MAX_AGE
+      path: constants.REFRESH_TOKEN_COOKIE_PATH,
+      maxAge: constants.MAX_AGE
     })
 
     return successHandler(HTTP_STATUS_CODE.CREATED, data)
@@ -125,7 +119,7 @@ authRouter.post('/signup', signUpBodyValidation, async (
 
     if (result) {
       const conflictError = new ConflictError(
-        Error("Email already in use.")
+        Error(constants.EMAIL_ALREADY_IN_USE_MESSAGE)
       )
       return errorHandler(conflictError)
     }
@@ -160,7 +154,7 @@ authRouter.post('/signup', signUpBodyValidation, async (
       user: result,
       auth: {
         accessToken,
-        expiresIn: AVG_AGE
+        expiresIn: constants.AVG_AGE
       }
     }
 
@@ -169,7 +163,7 @@ authRouter.post('/signup', signUpBodyValidation, async (
     const refreshTokenOpaque = randomBytes(48).toString('hex')
     const { token: refreshToken } = await prisma.refreshToken.create({
       data: {
-        expiresAt: new Date(Date.now() + MAX_AGE),
+        expiresAt: new Date(Date.now() + constants.MAX_AGE),
         token: refreshTokenOpaque,
         createdAt: new Date(Date.now()),
         ipAddress,
@@ -178,12 +172,12 @@ authRouter.post('/signup', signUpBodyValidation, async (
       }
     })
 
-    response.cookie('refresh_token', refreshToken, {
+    response.cookie(constants.REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      path: '/auth/refresh',
-      maxAge: MAX_AGE
+      path: constants.REFRESH_TOKEN_COOKIE_PATH,
+      maxAge: constants.MAX_AGE
     })
 
     return successHandler(HTTP_STATUS_CODE.CREATED, data)
@@ -200,7 +194,7 @@ authRouter.post('/signout', authenticate, async (
   const successHandler = successResponseHandler(response)
   const errorHandler = errorResponseHandler(response)
   const { id } = request.body
-  const { refresh_token } = request.cookies
+  const { [constants.REFRESH_TOKEN_COOKIE_NAME]: refreshToken } = request.cookies
 
   try {
     await prisma.refreshToken.deleteMany({
@@ -208,17 +202,17 @@ authRouter.post('/signout', authenticate, async (
         AND: [
           {
             userId: id,
-            token: refresh_token
+            token: refreshToken
           }
         ]
       }
     })
 
-    response.clearCookie('refresh_token', {
+    response.clearCookie(constants.REFRESH_TOKEN_COOKIE_NAME, {
       httpOnly: true,
       secure: true,
       sameSite: 'strict',
-      path: '/auth/refresh',
+      path: constants.REFRESH_TOKEN_COOKIE_PATH,
     })
 
     return successHandler(HTTP_STATUS_CODE.NO_CONTENT)
@@ -231,7 +225,7 @@ authRouter.post('/signout', authenticate, async (
 authRouter.post('/refresh', async (request: Request, response: Response) => {
   const errorHandler = errorResponseHandler(response)
   const successHandler = successResponseHandler(response)
-  const refreshToken = request.cookies.refresh_token
+  const refreshToken = request.cookies[constants.REFRESH_TOKEN_COOKIE_NAME]
   const ipAddress = request.ip ?? request.socket.remoteAddress
   const userAgent = request.get('user-agent') ?? request.header('user-agent') ?? request.headers['user-agent']
   let token = null
@@ -239,7 +233,7 @@ authRouter.post('/refresh', async (request: Request, response: Response) => {
 
   if (!refreshToken) {
     const unauthorizedError = new UnauthorizedError(
-      Error('Invalid or inexistent refresh token')
+      Error(constants.INVALID_OR_EXISTENT_REFRESH_TOKEN_MESSAGE)
     )
     return errorHandler(unauthorizedError)
   }
@@ -253,14 +247,14 @@ authRouter.post('/refresh', async (request: Request, response: Response) => {
     
     if (!token || token.revokedAt || token.expiresAt < new Date()) {
       const unauthorizedError = new UnauthorizedError(
-        Error('Invalid or expired refresh token')
+        Error(constants.INVALID_OR_EXPIRED_REFRESH_TOKEN_MESSAGE)
       )
       return errorHandler(unauthorizedError)
     }
   
     if (token.ipAddress !== ipAddress || token.userAgent !== userAgent) {
       const forbiddenError = new ForbiddenError(
-        Error('You are not allowed to access this session with the current device')
+        Error(constants.FORBIDDEN_DEVICE_ACCESS_MESSAGE)
       )
       return errorHandler(forbiddenError)
     }
@@ -278,7 +272,7 @@ authRouter.post('/refresh', async (request: Request, response: Response) => {
   
     if (!user) {
       const unauthorizedError = new UnauthorizedError(
-        Error('No user associated with this token')
+        Error(constants.NO_USER_ASSOCIATED_MESSAGE)
       )
       return errorHandler(unauthorizedError)
     }
@@ -300,7 +294,7 @@ authRouter.post('/refresh', async (request: Request, response: Response) => {
     user: noSensitiveUserData,
     auth: {
       accessToken,
-      expiresIn: AVG_AGE
+      expiresIn: constants.AVG_AGE
     }
   }
 
@@ -324,7 +318,7 @@ authRouter.get('/me', authenticate, async (
 
     if (!user) {
       const notFoundError = new NotFoundError(
-        Error("User not found.")
+        Error(constants.USER_NOT_FOUND_MESSAGE)
       )
       return errorHandler(notFoundError)
     }
@@ -341,7 +335,7 @@ authRouter.get('/me', authenticate, async (
       user: noSensitiveUserData,
       auth: {
         accessToken,
-        expiresIn: AVG_AGE
+        expiresIn: constants.AVG_AGE
       }
     }
 
@@ -370,7 +364,7 @@ authRouter.post('/forgot-password', forgotBodyValidation, async(
 
     if (!user) {
       const notFoundError = new NotFoundError(
-        Error('User not found.')
+        Error(constants.USER_NOT_FOUND_MESSAGE)
       )
       return errorHandler(notFoundError)
     }
@@ -384,7 +378,7 @@ authRouter.post('/forgot-password', forgotBodyValidation, async(
   try {
     await prisma.passwordResetToken.create({
       data: {
-        expiresAt: new Date(Date.now() + AVG_AGE),
+        expiresAt: new Date(Date.now() + constants.AVG_AGE),
         token,
         userId: user.id
       }
@@ -402,7 +396,7 @@ authRouter.post('/forgot-password', forgotBodyValidation, async(
       </strong>`,
     });
 
-    return successHandler(HTTP_STATUS_CODE.SUCCESS, "You'll receive instructions via email.")
+    return successHandler(HTTP_STATUS_CODE.SUCCESS, constants.RESET_PASSWORD_INSTRUCTIONS_MESSAGE)
   } catch (error) {
     const serverError = new ServerError(error as Error)
     return errorHandler(serverError)
@@ -426,7 +420,7 @@ authRouter.post('/reset-password', resetBodyValidation, async(
 
     if (!reset || reset.expiresAt < new Date() || reset.usedAt) {
       const unauthorizedError = new UnauthorizedError(
-        Error('Invalid or expired token')
+        Error(constants.INVALID_OR_EXPIRED_PASSWORD_RESET_TOKEN_MESSAGE)
       )
       return errorHandler(unauthorizedError)
     }
@@ -451,7 +445,7 @@ authRouter.post('/reset-password', resetBodyValidation, async(
       }
     })
 
-    return successHandler(HTTP_STATUS_CODE.SUCCESS, "Password reset successful")
+    return successHandler(HTTP_STATUS_CODE.SUCCESS, constants.RESET_PASSWORD_SUCCESS_MESSAGE)
   } catch (error) {
     const serverError = new ServerError(error as Error)
     return errorHandler(serverError)
