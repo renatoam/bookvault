@@ -1,17 +1,22 @@
+import type { RefreshToken, User } from "@prisma/client";
 import argon from "argon2";
-import type { Request, Response } from "express";
-import { SignJWT } from "jose";
-import { randomBytes, randomUUID } from "node:crypto";
-import { Resend } from "resend";
+import type { CookieOptions, Request, Response } from "express";
 import { errorResponseHandler } from "../../config/http/httpErrorResponseHandler";
 import { HTTP_STATUS_CODE } from "../../config/http/httpResponseHandlers";
 import { successResponseHandler } from "../../config/http/httpSuccessResponseHandler";
 import type { SignInRequest, SignUpRequest } from "../../config/http/httpTypes";
-import { prisma } from "../../config/prisma";
 import * as constants from "../../core/constants";
-import { ConflictError, ForbiddenError, NotFoundError, ServerError, UnauthorizedError } from "../../core/errors";
+import { UnauthorizedError } from "../../core/errors";
+import type { SignedUserResponseDto } from "../../core/types/dtos/auth";
+import { generateAccessToken, generateRefreshToken, getDeviceInfo, validatePassword } from "./auth.helpers";
+import { AuthService } from "./auth.service";
 
 export class AuthController {
+  private readonly authService: AuthService
+
+  constructor(authService: AuthService) {
+    this.authService = authService
+  }
 
   async signUp(request: SignUpRequest, response: Response) {
     const { email, password, name } = request.body
@@ -19,79 +24,33 @@ export class AuthController {
     const successHandler = successResponseHandler(response)
 
     try {
-      const result = await prisma.user.findFirst({
-        where: {
-          email
-        }
-      })
-
-      if (result) {
-        const conflictError = new ConflictError(
-          Error(constants.EMAIL_ALREADY_IN_USE_MESSAGE)
-        )
-        return errorHandler(conflictError)
-      }
+      await this.authService.getUserByEmail(email, true)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
 
-    try {    
-      const userId = randomUUID()
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-      const accessToken = await new SignJWT({ userId })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('15 min')
-        .setSubject(userId)
-        .sign(secret)
+    try {
       const passwordHash = await argon.hash(password)
-      const atIndex = email.indexOf('@')
-      const placeholderName = email.slice(0, atIndex)
+      const user = await this.authService.createUser({ email, passwordHash, name })
+      const auth = await generateAccessToken(user.id)      
 
-      const { passwordHash: ignorePassword, ...result } = await prisma.user.create({
-        data: {
-          email,
-          name: name ?? placeholderName,
-          passwordHash,
-          id: userId
-        }
-      })
-
-      const data = {
-        user: result,
-        auth: {
-          accessToken,
-          expiresIn: constants.AVG_AGE
-        }
+      const data: SignedUserResponseDto = {
+        user,
+        auth
       }
 
-      const ipAddress = request.ip ?? request.socket.remoteAddress
-      const userAgent = request.get('user-agent') ?? request.header('user-agent') ?? request.headers['user-agent']
-      const refreshTokenOpaque = randomBytes(48).toString('hex')
-      const { token: refreshToken } = await prisma.refreshToken.create({
-        data: {
-          expiresAt: new Date(Date.now() + constants.MAX_AGE),
-          token: refreshTokenOpaque,
-          createdAt: new Date(Date.now()),
-          ipAddress,
-          userAgent,
-          userId,
-        }
-      })
+      const { configData, createData } = generateRefreshToken(request)
+      await this.authService.createRefreshToken(user.id, createData)
 
-      response.cookie(constants.REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        path: constants.REFRESH_TOKEN_COOKIE_PATH,
-        maxAge: constants.MAX_AGE
-      })
+      response.cookie(
+        configData.tokenName,
+        createData.token,
+        { ...configData } as CookieOptions
+      )
 
       return successHandler(HTTP_STATUS_CODE.CREATED, data)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   }
 
@@ -102,76 +61,31 @@ export class AuthController {
     let user = null
 
     try {
-      user = await prisma.user.findFirst({
-        where: {
-          email
-        }
-      })
-
-      if (!user) {
-        const notFoundError = new NotFoundError(
-          Error(constants.USER_NOT_FOUND_MESSAGE)
-        )
-        return errorHandler(notFoundError)
-      }
+      user = await this.authService.getUserByEmail(email)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
 
     try {
-      const userId = user.id
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-      const accessToken = await new SignJWT({ userId })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('15 min')
-        .setSubject(userId)
-        .sign(secret)
-      const isPasswordValid = await argon.verify(user.passwordHash, password)
+      const auth = await generateAccessToken(user.id)
+      const userData = await validatePassword(password, user)
 
-      if (!isPasswordValid) {
-        const unauthorizedError = new UnauthorizedError(
-          Error(constants.INVALID_PASSWORD_MESSAGE)
-        )
-        return errorHandler(unauthorizedError)
+      const data: SignedUserResponseDto = {
+        user: userData,
+        auth
       }
 
-      const { passwordHash, ...nonSensitiveUserData } = user
-      const data = {
-        user: nonSensitiveUserData,
-        auth: {
-          accessToken,
-          expiresIn: constants.AVG_AGE
-        }
-      }
+      const { configData, createData } = generateRefreshToken(request)
+      await this.authService.createRefreshToken(user.id, createData)
 
-      const ipAddress = request.ip ?? request.socket.remoteAddress
-      const userAgent = request.get('user-agent') ?? request.header('user-agent') ?? request.headers['user-agent']
-      const refreshTokenOpaque = randomBytes(48).toString('hex')
-      const { token: refreshToken } = await prisma.refreshToken.create({
-        data: {
-          expiresAt: new Date(Date.now() + constants.MAX_AGE),
-          token: refreshTokenOpaque,
-          createdAt: new Date(Date.now()),
-          ipAddress,
-          userAgent,
-          userId,
-        }
-      })
-
-      response.cookie(constants.REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        path: constants.REFRESH_TOKEN_COOKIE_PATH,
-        maxAge: constants.MAX_AGE
-      })
+      response.cookie(
+        configData.tokenName,
+        createData.token, { ...configData } as CookieOptions
+      )
 
       return successHandler(HTTP_STATUS_CODE.CREATED, data)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   }
 
@@ -182,28 +96,13 @@ export class AuthController {
     const { [constants.REFRESH_TOKEN_COOKIE_NAME]: refreshToken } = request.cookies
 
     try {
-      await prisma.refreshToken.deleteMany({
-        where: {
-          AND: [
-            {
-              userId: id,
-              token: refreshToken
-            }
-          ]
-        }
-      })
-
-      response.clearCookie(constants.REFRESH_TOKEN_COOKIE_NAME, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-        path: constants.REFRESH_TOKEN_COOKIE_PATH,
-      })
+      await this.authService.deleteRefreshToken(id, refreshToken)
+      const { configData } = generateRefreshToken(request)
+      response.clearCookie(configData.tokenName, { ...configData } as CookieOptions)
 
       return successHandler(HTTP_STATUS_CODE.NO_CONTENT)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   }
 
@@ -211,10 +110,9 @@ export class AuthController {
     const errorHandler = errorResponseHandler(response)
     const successHandler = successResponseHandler(response)
     const refreshToken = request.cookies[constants.REFRESH_TOKEN_COOKIE_NAME]
-    const ipAddress = request.ip ?? request.socket.remoteAddress
-    const userAgent = request.get('user-agent') ?? request.header('user-agent') ?? request.headers['user-agent']
-    let token = null
-    let user = null
+    const { ipAddress, userAgent } = getDeviceInfo(request)
+    let token: RefreshToken | null = null
+    let user: User | null = null
   
     if (!refreshToken) {
       const unauthorizedError = new UnauthorizedError(
@@ -224,63 +122,35 @@ export class AuthController {
     }
     
     try {
-      token = await prisma.refreshToken.findUnique({
-        where: {
-          token: refreshToken
-        }
-      })
-      
-      if (!token || token.revokedAt || token.expiresAt < new Date()) {
-        const unauthorizedError = new UnauthorizedError(
-          Error(constants.INVALID_OR_EXPIRED_REFRESH_TOKEN_MESSAGE)
-        )
-        return errorHandler(unauthorizedError)
-      }
-    
-      if (token.ipAddress !== ipAddress || token.userAgent !== userAgent) {
-        const forbiddenError = new ForbiddenError(
-          Error(constants.FORBIDDEN_DEVICE_ACCESS_MESSAGE)
-        )
-        return errorHandler(forbiddenError)
-      }
+      token = await this.authService.getRefreshToken(refreshToken, { ipAddress, userAgent })
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   
     try {
-      user = await prisma.user.findUnique({
-        where: {
-          id: token.userId
-        }
-      })
-    
-      if (!user) {
-        const unauthorizedError = new UnauthorizedError(
-          Error(constants.NO_USER_ASSOCIATED_MESSAGE)
-        )
-        return errorHandler(unauthorizedError)
-      }
+      user = await this.authService.getUserById(token.userId)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-    const accessToken = await new SignJWT({ userId: user.id })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('15 min')
-      .setSubject(user.id)
-      .sign(secret)
-  
+    const auth = await generateAccessToken(user.id)
     const { passwordHash, ...noSensitiveUserData } = user
-    const data = {
+    const data: SignedUserResponseDto = {
       user: noSensitiveUserData,
-      auth: {
-        accessToken,
-        expiresIn: constants.AVG_AGE
-      }
+      auth
+    }
+
+    try {
+      const { configData, createData } = generateRefreshToken(request)
+      await this.authService.createRefreshToken(user.id, createData)
+  
+      response.cookie(
+        configData.tokenName,
+        createData.token,
+        { ...configData } as CookieOptions
+      )
+    } catch (error) {
+      return errorHandler(error as Error)
     }
   
     return successHandler(HTTP_STATUS_CODE.SUCCESS, data)
@@ -290,53 +160,20 @@ export class AuthController {
     const successHandler = successResponseHandler(response)
     const errorHandler = errorResponseHandler(response)
     const { email } = request.body
-    let user = null
+    let user: User
   
     try {
-      user = await prisma.user.findUnique({
-        where: {
-          email
-        }
-      })
-  
-      if (!user) {
-        const notFoundError = new NotFoundError(
-          Error(constants.USER_NOT_FOUND_MESSAGE)
-        )
-        return errorHandler(notFoundError)
-      }
+      user = await this.authService.getUserByEmail(email)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   
-    const token = randomBytes(32).toString('hex')
-  
     try {
-      await prisma.passwordResetToken.create({
-        data: {
-          expiresAt: new Date(Date.now() + constants.AVG_AGE),
-          token,
-          userId: user.id
-        }
-      })
-  
-      const resend = new Resend(process.env.RESEND_KEY);
-      await resend.emails.send({
-        from: `${process.env.EMAIL_SUBJECT} <${process.env.EMAIL_SENDER}>`,
-        to: [email],
-        subject: 'Reset Password',
-        html: `<strong>
-          <a target="_blank" href="${process.env.FRONTEND_RESET_ROUTE}?token=${token}">
-            Reset
-          </a>
-        </strong>`,
-      });
-  
+      const token = await this.authService.createPasswordResetToken(user.id)
+      await this.authService.sendResetPasswordEmail(email, token)  
       return successHandler(HTTP_STATUS_CODE.SUCCESS, constants.RESET_PASSWORD_INSTRUCTIONS_MESSAGE)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   }
 
@@ -346,85 +183,35 @@ export class AuthController {
     const { token, password } = request.body
   
     try {
-      const reset = await prisma.passwordResetToken.findUnique({
-        where: {
-          token
-        }
-      })
-  
-      if (!reset || reset.expiresAt < new Date() || reset.usedAt) {
-        const unauthorizedError = new UnauthorizedError(
-          Error(constants.INVALID_OR_EXPIRED_PASSWORD_RESET_TOKEN_MESSAGE)
-        )
-        return errorHandler(unauthorizedError)
-      }
-  
       const passwordHash = await argon.hash(password)
-  
-      await prisma.user.update({
-        where: {
-          id: reset.userId,
-        },
-        data: {
-          passwordHash
-        }
-      })
-  
-      await prisma.passwordResetToken.update({
-        where: {
-          id: reset.id
-        },
-        data: {
-          usedAt: new Date()
-        }
-      })
+      const reset = await this.authService.getPasswordResetToken(token)
+      await this.authService.updateUserPassword(reset.userId, passwordHash)
+      await this.authService.invalidatePasswordResetToken(reset.id)
   
       return successHandler(HTTP_STATUS_CODE.SUCCESS, constants.RESET_PASSWORD_SUCCESS_MESSAGE)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   }
 
   async me(request: Request, response: Response) {
     const successHandler = successResponseHandler(response)
     const errorHandler = errorResponseHandler(response)
-    const { id, secret } = request.body
+    const { id } = request.body
   
     try {
-      const user = await prisma.user.findUnique({
-        where: {
-          id
-        }
-      })
-  
-      if (!user) {
-        const notFoundError = new NotFoundError(
-          Error(constants.USER_NOT_FOUND_MESSAGE)
-        )
-        return errorHandler(notFoundError)
-      }
-  
-      const accessToken = await new SignJWT({ userId: user.id })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setIssuedAt()
-        .setExpirationTime('15 min')
-        .setSubject(user.id)
-        .sign(secret)
+      const user = await this.authService.getUserById(id)
+      const auth = await generateAccessToken(user.id)
   
       const { passwordHash, ...noSensitiveUserData } = user
-      const data = {
+      const data: SignedUserResponseDto = {
         user: noSensitiveUserData,
-        auth: {
-          accessToken,
-          expiresIn: constants.AVG_AGE
-        }
+        auth
       }
   
       return successHandler(HTTP_STATUS_CODE.SUCCESS, data)
     } catch (error) {
-      const serverError = new ServerError(error as Error)
-      return errorHandler(serverError)
+      return errorHandler(error as Error)
     }
   }
 }
