@@ -22,11 +22,11 @@ export interface Book {
   title: string
   author: string
   status: Status
-  description?: string
+  description: string
 }
 
 export interface UpsertBookParams {
-  id?: string
+  id: string
 }
 
 export type UpsertBookRequest = Request<UpsertBookParams, unknown, Book, unknown>

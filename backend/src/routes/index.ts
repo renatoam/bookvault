@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { limiter } from "../config/rateLimit";
 import { authRouter } from "../features/auth/auth.routes";
-import { booksRouter } from "./books.routes";
+import { booksRouter } from "../features/books/books.routes";
 
 export const router = Router()
 
