@@ -1,5 +1,5 @@
 import * as constants from "../../core/constants"
-import type { GetBooksDto } from "../../core/types/dtos/books"
+import type { GetBooksDto } from "./books.dto"
 
 export const getBooksQuery = (props: GetBooksDto) => {
   const { q, author, status } = props

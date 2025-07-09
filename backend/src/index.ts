@@ -2,15 +2,15 @@ import cors from "cors";
 import { json, type Request, type Response } from 'express';
 import helmet from "helmet";
 import pino from "pino-http";
-import { limiter } from "./config/rateLimit";
-import { app } from "./config/server";
-import { router } from "./routes";
+import { limiter } from "./infrastructure/config/rateLimit";
+import { app } from "./infrastructure/config/server";
+import { router } from "./infrastructure/config/router";
 import cookieParser from 'cookie-parser'
 
 app.use(helmet());
 app.use(pino());
 app.use(cors({
-  origin: ['http://localhost:5173'],
+  origin: [process.env.FRONTEND_URL ?? 'http://localhost:5173'],
   credentials: true
 }));
 app.use(json())

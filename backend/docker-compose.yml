@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:15
+    container_name: bookvault_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bookvault_backend
+    restart: on-failure
+    command: npm run dev
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      # App port
+      PORT: 4000
+      # Database
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/postgres"
+      # JWT secret (you may override in .env)
+      JWT_SECRET: ${JWT_SECRET}
+      # Email (Resend)
+      RESEND_KEY: ${RESEND_KEY}
+      EMAIL_SENDER: ${EMAIL_SENDER}
+      EMAIL_SUBJECT: ${EMAIL_SUBJECT}
+      # Frontend origin for CORS
+      FRONTEND_URL: ${FRONTEND_URL}
+    depends_on:
+      - db
+
+volumes:
+  db-data:

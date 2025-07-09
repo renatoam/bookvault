@@ -1,9 +1,9 @@
 import { type NextFunction, type Response } from "express";
 import { z } from "zod";
-import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
-import { ClientError, getErrorMessage } from "../core/errors";
-import type { SignInRequest } from "../config/http/httpTypes";
-import * as constants from "../core/constants"
+import * as constants from "../../core/constants";
+import { ClientError, getErrorMessage } from "../../core/errors";
+import type { SignInRequest } from "../../features/auth/auth.types";
+import { errorResponseHandler } from "../http/httpErrorResponseHandler";
 
 export const signInSchema = z.object({
   email: z

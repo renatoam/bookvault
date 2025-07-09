@@ -1,10 +1,9 @@
-import { type NextFunction, type Response } from "express";
+import { type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
-import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
-import type { UpsertBookRequest } from "../config/http/httpTypes";
-import { ClientError, getErrorMessage } from "../core/errors";
+import * as constants from "../../core/constants";
+import { ClientError, getErrorMessage } from "../../core/errors";
+import { errorResponseHandler } from "../http/httpErrorResponseHandler";
 import { statusEnum } from "./helpers";
-import * as constants from "../core/constants";
 
 export const bookSchema = z.object({
   id: z.string().optional(),
@@ -15,7 +14,7 @@ export const bookSchema = z.object({
 });
 
 export const bodyBookValidation = async (
-  request: UpsertBookRequest,
+  request: Request,
   response: Response,
   next: NextFunction
 ) => {

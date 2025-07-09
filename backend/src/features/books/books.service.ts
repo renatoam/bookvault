@@ -1,16 +1,17 @@
-import { prisma } from "../../config/prisma";
-import type {
-  GetBooksDto,
-  GetBooksResponse,
-  CreateBookDto,
-  GetBookDto,
-  UpdateBookRequestDto,
-} from "../../core/types/dtos/books";
+import { randomUUID } from "crypto";
+import type { Book } from "@prisma/client";
+import { prisma } from "../../infrastructure/config/prisma";
 import * as constants from "../../core/constants";
 import { NotFoundError, ServerError } from "../../core/errors";
+import type {
+  BookDto,
+  CreateBookDto,
+  GetBookDto,
+  GetBooksDto,
+  UpdateBookDto  
+} from "./books.dto";
 import { getBooksOrderBy, getBooksPagination, getBooksQuery } from "./books.helpers";
-import type { Book } from "@prisma/client";
-import { randomUUID } from "crypto";
+import type { GetBooksResponse } from "./books.types";
 
 export class BooksService {
   async getBooks(props: GetBooksDto): Promise<GetBooksResponse> {
@@ -47,8 +48,16 @@ export class BooksService {
         )
       }
 
+      const content: BookDto[] = data.map((book: Book) => ({
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        status: book.status,
+        description: book.description ?? ''
+      }))
+      
       const result: GetBooksResponse = {
-        content: data,
+        content,
         page: pagination.skip,
         resultsPerPage: pagination.take,
         totalResults
@@ -60,7 +69,7 @@ export class BooksService {
     }
   }
 
-  async createBook(props: CreateBookDto): Promise<Book> {
+  async createBook(props: CreateBookDto): Promise<BookDto> {
     const { title, author, status, description } = props
 
     try {
@@ -87,13 +96,21 @@ export class BooksService {
         }
       })
 
-      return result
+      const book: BookDto = {
+        id: result.id,
+        title: result.title,
+        author: result.author,
+        status: result.status,
+        description: result.description ?? ''
+      }
+
+      return book
     } catch (error) {
       throw new ServerError(error as Error)
     }
   }
 
-  async getBook(props: GetBookDto): Promise<Book> {
+  async getBook(props: GetBookDto): Promise<BookDto> {
     const { id } = props
 
     try {
@@ -107,13 +124,21 @@ export class BooksService {
         )
       }
 
-      return result
+      const book: BookDto = {
+        id: result.id,
+        title: result.title,
+        author: result.author,
+        status: result.status,
+        description: result.description ?? ''
+      }
+
+      return book
     } catch (error) {
       throw new ServerError(error as Error)
     }
   }
 
-  async updateBook(props: UpdateBookRequestDto): Promise<Book> {
+  async updateBook(props: UpdateBookDto): Promise<BookDto> {
     const { id, title, author, status, description } = props
 
     try {
@@ -122,7 +147,15 @@ export class BooksService {
         data: { title, author, status, description }
       })
 
-      return result
+      const book: BookDto = {
+        id: result.id,
+        title: result.title,
+        author: result.author,
+        status: result.status,
+        description: result.description ?? ''
+      }
+
+      return book
     } catch (error) {
       throw new ServerError(error as Error)
     }

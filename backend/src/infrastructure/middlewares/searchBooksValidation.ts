@@ -1,10 +1,10 @@
-import { type NextFunction, type Response } from "express";
+import { type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
-import { errorResponseHandler } from "../config/http/httpErrorResponseHandler";
-import type { SearchRequest } from "../config/http/httpTypes";
-import { ClientError, getErrorMessage } from "../core/errors";
+import * as constants from "../../core/constants";
+import { ClientError, getErrorMessage } from "../../core/errors";
+import { errorResponseHandler } from "../http/httpErrorResponseHandler";
 import { statusEnum } from "./helpers";
-import * as constants from "../core/constants";
+import type { ParsedQs } from "qs";
 
 const searchSchema = z.object({
   q: z.string().trim().max(100).optional().default(''),
@@ -16,7 +16,7 @@ const searchSchema = z.object({
 });
 
 export const searchBooksValidation = async (
-  request: SearchRequest,
+  request: Request,
   response: Response,
   next: NextFunction
 ) => {
@@ -29,16 +29,7 @@ export const searchBooksValidation = async (
     return errorHandler(badRequestError)
   }
 
-  const { sort, ...rest } = parseResult.data
-  const orderBy = sort ? {
-    field: sort.split(':')[0]!,
-    order: sort.split(':')[1]!
-  } : undefined
-
-  request.query = {
-    ...rest,
-    orderBy
-  }
+  request.query = parseResult.data as unknown as ParsedQs
 
   next()
 }

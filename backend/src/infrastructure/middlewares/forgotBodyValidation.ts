@@ -1,8 +1,8 @@
-import { z } from "zod"
 import type { NextFunction, Request, Response } from "express"
-import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
-import { ClientError, getErrorMessage } from "../core/errors"
-import * as constants from "../core/constants"
+import { z } from "zod"
+import * as constants from "../../core/constants"
+import { ClientError, getErrorMessage } from "../../core/errors"
+import { errorResponseHandler } from "../http/httpErrorResponseHandler"
 
 export const forgotSchema = z.object({
   email: z

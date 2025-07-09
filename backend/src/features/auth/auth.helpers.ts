@@ -1,7 +1,7 @@
 import argon from "argon2"
 import { SignJWT } from "jose"
 import { randomBytes } from "node:crypto"
-import type { SignInRequest, SignUpRequest } from "../../config/http/httpTypes"
+import type { SignInRequest, SignUpRequest } from "./auth.types"
 import * as constants from "../../core/constants"
 import { ServerError, UnauthorizedError } from "../../core/errors"
 import type { User } from "@prisma/client"

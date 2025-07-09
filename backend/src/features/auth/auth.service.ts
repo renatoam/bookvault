@@ -1,36 +1,45 @@
+import type { PasswordResetToken, RefreshToken } from "@prisma/client";
 import { randomBytes, randomUUID } from "node:crypto";
-import { prisma } from "../../config/prisma";
+import { Resend } from "resend";
 import * as constants from "../../core/constants";
 import { ConflictError, ForbiddenError, NotFoundError, ServerError, UnauthorizedError } from "../../core/errors";
-import type { CreateUserDto } from "../../core/types/dtos/auth";
+import { prisma } from "../../infrastructure/config/prisma";
+import type { CreateUserDto, GetUserResponseDto } from "./auth.dto";
 import { type CreateRefreshTokenData, type DeviceInfo } from "./auth.helpers";
-import type { PasswordResetToken, RefreshToken, User } from "@prisma/client";
-import { Resend } from "resend";
 
 export class AuthService {
   async createUser(props: CreateUserDto) {
     const { email, passwordHash, name = '' } = props
-    const userId = randomUUID()
+    const id = randomUUID()
     const atIndex = email.indexOf('@')
     const placeholderName = email.slice(0, atIndex)
 
     try {
-      const { passwordHash: ignorePassword, ...result } = await prisma.user.create({
+      await prisma.user.create({
         data: {
           email,
           name: name ?? placeholderName,
           passwordHash,
-          id: userId
+          id
         }
       })
+
+      const user: GetUserResponseDto = {
+        email,
+        name: name ?? placeholderName,
+        id
+      }
   
-      return result
+      return user
     } catch (error) {
       throw new ServerError(error as Error)
     }
   }
 
-  async getUserByEmail(email: string, validateEquality: boolean = false): Promise<User> {
+  async getUserByEmail(
+    email: string,
+    validateEquality: boolean = false
+  ): Promise<Required<GetUserResponseDto> | null> {
     try {
       const result = await prisma.user.findFirst({
         where: {
@@ -44,19 +53,33 @@ export class AuthService {
         )
       }
 
+      if (!result && validateEquality) {
+        return null
+      }
+
       if (!result) {
         throw new NotFoundError(
           Error(constants.USER_NOT_FOUND_MESSAGE)
         )
       }
 
-      return result
+      const user: Required<GetUserResponseDto> = {
+        email: result.email,
+        name: result.name,
+        id: result.id,
+        passwordHash: result.passwordHash
+      }
+
+      return user
     } catch (error) {
       throw new ServerError(error as Error)
     }
   }
 
-  async getUserById(id: string): Promise<User> {
+  async getUserById(
+    id: string,
+    withPasswordHash: boolean = false
+  ): Promise<GetUserResponseDto> {
     try {
       const result = await prisma.user.findUnique({
         where: { id }
@@ -68,7 +91,14 @@ export class AuthService {
         )
       }
 
-      return result
+      const user: GetUserResponseDto = {
+        email: result.email,
+        name: result.name,
+        id: result.id,
+        passwordHash: withPasswordHash ? result.passwordHash : undefined
+      }
+
+      return user
     } catch (error) {
       throw new ServerError(error as Error)
     }

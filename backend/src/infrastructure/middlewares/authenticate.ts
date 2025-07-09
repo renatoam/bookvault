@@ -1,8 +1,8 @@
 import type { NextFunction, Request, Response } from "express"
 import { jwtVerify } from "jose"
-import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
-import { ServerError, UnauthorizedError } from "../core/errors"
-import * as constants from "../core/constants"
+import * as constants from "../../core/constants"
+import { ServerError, UnauthorizedError } from "../../core/errors"
+import { errorResponseHandler } from "../http/httpErrorResponseHandler"
 
 export const authenticate = async (
   request: Request,
@@ -32,6 +32,7 @@ export const authenticate = async (
   }
 
   request.body = {
+    ...request.body,
     id: userId,
     secret
   }

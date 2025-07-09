@@ -1,15 +1,15 @@
 import type { RefreshToken, User } from "@prisma/client";
 import argon from "argon2";
 import type { CookieOptions, Request, Response } from "express";
-import { errorResponseHandler } from "../../config/http/httpErrorResponseHandler";
-import { HTTP_STATUS_CODE } from "../../config/http/httpResponseHandlers";
-import { successResponseHandler } from "../../config/http/httpSuccessResponseHandler";
-import type { SignInRequest, SignUpRequest } from "../../config/http/httpTypes";
 import * as constants from "../../core/constants";
 import { UnauthorizedError } from "../../core/errors";
-import type { SignedUserResponseDto } from "../../core/types/dtos/auth";
+import { errorResponseHandler } from "../../infrastructure/http/httpErrorResponseHandler";
+import { HTTP_STATUS_CODE } from "../../infrastructure/http/httpResponseHandlers";
+import { successResponseHandler } from "../../infrastructure/http/httpSuccessResponseHandler";
+import type { GetUserResponseDto, SignedUserResponseDto } from "./auth.dto";
 import { generateAccessToken, generateRefreshToken, getDeviceInfo, validatePassword } from "./auth.helpers";
 import { AuthService } from "./auth.service";
+import type { SignInRequest, SignUpRequest } from "./auth.types";
 
 export class AuthController {
   private readonly authService: AuthService
@@ -58,10 +58,10 @@ export class AuthController {
     const { email, password } = request.body
     const errorHandler = errorResponseHandler(response)
     const successHandler = successResponseHandler(response)
-    let user = null
+    let user: Required<GetUserResponseDto> | null = null
 
     try {
-      user = await this.authService.getUserByEmail(email)
+      user = await this.authService.getUserByEmail(email) as Required<GetUserResponseDto>
     } catch (error) {
       return errorHandler(error as Error)
     }
@@ -128,7 +128,7 @@ export class AuthController {
     }
   
     try {
-      user = await this.authService.getUserById(token.userId)
+      user = await this.authService.getUserById(token.userId, true) as Required<GetUserResponseDto>
     } catch (error) {
       return errorHandler(error as Error)
     }
@@ -160,10 +160,10 @@ export class AuthController {
     const successHandler = successResponseHandler(response)
     const errorHandler = errorResponseHandler(response)
     const { email } = request.body
-    let user: User
+    let user: GetUserResponseDto
   
     try {
-      user = await this.authService.getUserByEmail(email)
+      user = await this.authService.getUserByEmail(email) as Required<GetUserResponseDto>
     } catch (error) {
       return errorHandler(error as Error)
     }
@@ -203,9 +203,8 @@ export class AuthController {
       const user = await this.authService.getUserById(id)
       const auth = await generateAccessToken(user.id)
   
-      const { passwordHash, ...noSensitiveUserData } = user
       const data: SignedUserResponseDto = {
-        user: noSensitiveUserData,
+        user,
         auth
       }
   

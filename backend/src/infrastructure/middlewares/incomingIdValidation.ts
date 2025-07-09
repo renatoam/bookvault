@@ -1,14 +1,14 @@
-import { type Request, type Response, type NextFunction } from "express"
-import { errorResponseHandler } from "../config/http/httpErrorResponseHandler"
-import { ClientError, getErrorMessage } from "../core/errors"
+import { type NextFunction, type Request, type Response } from "express"
 import { z } from "zod"
+import { ClientError, getErrorMessage } from "../../core/errors"
+import { errorResponseHandler } from "../http/httpErrorResponseHandler"
 
 const schema = z.object({
   id: z.string().uuid()
 })
 
 export function validateIncomingId(
-  request: Request<{ id: string }>,
+  request: Request,
   response: Response,
   next: NextFunction
 ) {
