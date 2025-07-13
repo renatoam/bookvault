@@ -1,6 +1,6 @@
 # Book Vault
 
-A fullstack book management application built for the Curotec technical assessment.
+A fullstack book management application.
 
 ---
 

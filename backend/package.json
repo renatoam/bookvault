@@ -1,7 +1,7 @@
 {
-  "name": "curotec-backend",
+  "name": "book-vault-backend",
   "version": "1.0.0",
-  "description": "Curotec service. Used for technical assessment.",
+  "description": "Book Vault backend",
   "main": "index.js",
   "type": "module",
   "scripts": {
