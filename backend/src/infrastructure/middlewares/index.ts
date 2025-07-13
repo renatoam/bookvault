@@ -1,4 +1,5 @@
 export * from './authenticate'
+export * from './authorsValidation'
 export * from './bookBodyValidation'
 export * from './forgotBodyValidation'
 export * from './incomingIdValidation'

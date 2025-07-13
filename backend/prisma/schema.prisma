@@ -21,13 +21,33 @@ model User {
 model Book {
   id          String   @id @default(cuid())
   title       String
-  author      String
+  author      String   // Mantém como string para simplicidade
   status      BookStatus
   description String?
   userId      String
   user        User      @relation(fields: [userId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([author]) // Index para busca rápida por autor
+  @@index([userId, status]) // Index composto para filtros do usuário
+}
+
+// Tabela separada para autocomplete e normalização futura
+model Author {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique // Para URLs amigáveis
+  bio         String?
+  imageUrl    String?
+  website     String?
+  booksCount  Int      @default(0) // Cache do número de livros
+  isVerified  Boolean  @default(false) // Para autores verificados
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name]) // Index para autocomplete
+  @@index([booksCount]) // Index para ordenação por popularidade
 }
 
 enum BookStatus {

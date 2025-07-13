@@ -1,44 +1,134 @@
+version: '3.9'
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 📦 Docker Compose configuration for Book Vault development environment
+# Purpose: Define and link all necessary services (DB, cache, backend) with
+# clear explanations for each setting to facilitate understanding and maintenance.
+# ──────────────────────────────────────────────────────────────────────────────
+
 services:
+  # ──────────────────────────────────────────────────────────────────────────────
+  # 🗄️ PostgreSQL Database
+  # Using the official Alpine-based image for smaller footprint and security.
   db:
-    image: postgres:15
-    container_name: bookvault_db
-    restart: unless-stopped
+    image: postgres:15-alpine      # Lightweight Postgres variant
+    container_name: bookvault_db   # Friendly name for docker-compose ps / logs
+    restart: unless-stopped        # Auto-restart except when explicitly stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres                               # DB superuser
+      POSTGRES_PASSWORD: postgres                           # DB password (change for prod!)
+      POSTGRES_DB: bookvault                                # Initial database name
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+        # Ensure correct text encoding and locale settings for consistency
     ports:
-      - "5432:5432"
+      - "5432:5432"           # Map container’s Postgres port to host for local access
     volumes:
       - db-data:/var/lib/postgresql/data
+        # Persist DB data across restarts/removals
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+        # Seed or schema initialization script (read-only mount)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bookvault"]
+        # Uses Postgres’ built-in readiness check
+      interval: 10s        # How often to run the check
+      timeout: 5s          # How long to wait before considering it failed
+      retries: 5           # How many failures before marking unhealthy
+    networks:
+      - bookvault-network  # Attach to shared network for inter-service communication
 
+  # ──────────────────────────────────────────────────────────────────────────────
+  # ⚡ Redis for caching, session store, and rate-limit counters
+  redis:
+    image: redis:7-alpine           # Alpine variant for smaller footprint
+    container_name: bookvault_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"                 # Default Redis port mapped to host
+    volumes:
+      - redis-data:/data            # Persist Redis data (AOF / RDB files)
+    command: >
+      redis-server
+      --appendonly yes              # Enable Append-Only File persistence
+      --maxmemory 256mb             # Cap memory to avoid host OOM
+      --maxmemory-policy allkeys-lru
+        # Evict least-recently-used keys when memory limit is reached
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+        # Replies with "PONG" when ready
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookvault-network
+
+  # ──────────────────────────────────────────────────────────────────────────────
+  # 🛠️ Backend API Service (Node.js)
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: .                   # Build context root (where Dockerfile is located)
+      dockerfile: Dockerfile      # Explicit path to Dockerfile
+      target: dev                  # Use the "dev" stage for faster rebuilds in local dev
     container_name: bookvault_backend
-    restart: on-failure
-    command: npm run dev
+    restart: on-failure            # Restart only if the process crashes/errors
     ports:
-      - "4000:4000"
+      - "4000:4000"                # Expose backend port to host
     volumes:
-      - .:/app
-      - /app/node_modules
+      - .:/app                     # Mount source code for live reloading
+      - /app/node_modules         # Persist node_modules inside container
     environment:
-      # App port
+      # General
+      NODE_ENV: development        # Use development mode for logging, hot reload
       PORT: 4000
-      # Database
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/postgres"
-      # JWT secret (you may override in .env)
-      JWT_SECRET: ${JWT_SECRET}
-      # Email (Resend)
-      RESEND_KEY: ${RESEND_KEY}
-      EMAIL_SENDER: ${EMAIL_SENDER}
-      EMAIL_SUBJECT: ${EMAIL_SUBJECT}
-      # Frontend origin for CORS
-      FRONTEND_URL: ${FRONTEND_URL}
-    depends_on:
-      - db
 
+      # Database connection (uses Docker service name "db")
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/bookvault"
+      DIRECT_URL: "postgresql://postgres:postgres@db:5432/bookvault"
+
+      # Redis connection (uses service name "redis")
+      REDIS_URL: "redis://redis:6379"
+
+      # JWT secrets (override via host .env or CI/CD)
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
+
+      # Email service (Resend)
+      RESEND_KEY: ${RESEND_KEY}
+      EMAIL_SENDER: ${EMAIL_SENDER:-noreply@yourdomain.com}
+      EMAIL_SUBJECT: ${EMAIL_SUBJECT:-BookVault}
+
+      # CORS origin
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+
+      # Rate limiting config
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}   # 15 minutes
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+
+    depends_on:
+      db:
+        condition: service_healthy   # Wait until db healthcheck passes
+      redis:
+        condition: service_healthy   # Wait until redis healthcheck passes
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+        # HTTP GET /health must return 2xx
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - bookvault-network
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Persisted volumes for database and cache data, using local drivers by default
+# volumes are used to persist data across container removals/restarts
+# This instruction creates a volume named db-data and a volume named redis-data on the local machine
 volumes:
   db-data:
+    driver: local
+  redis-data:
+    driver: local
+
+# (Shared) Networks isolate your stack and enable service discovery by name (DNS names) (db, redis).
+networks:
+  bookvault-network:
+    driver: bridge # bridge is the default network driver, it is used to create a network that is isolated from the other networks
+

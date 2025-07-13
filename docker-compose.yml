@@ -1,0 +1,121 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: bookvault_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bookvault
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bookvault"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookvault-network
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: bookvault_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bookvault-network
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev  # Use dev stage for development
+    container_name: bookvault_backend
+    restart: on-failure
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      # App configuration
+      NODE_ENV: development
+      PORT: 4000
+      
+      # Database
+      DATABASE_URL: "postgresql://postgres:postgres@db:5432/bookvault"
+      DIRECT_URL: "postgresql://postgres:postgres@db:5432/bookvault"
+      
+      # Redis
+      REDIS_URL: "redis://redis:6379"
+      
+      # JWT secrets
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
+      
+      # Email configuration (Resend)
+      RESEND_KEY: ${RESEND_KEY}
+      EMAIL_SENDER: ${EMAIL_SENDER:-noreply@yourdomain.com}
+      EMAIL_SUBJECT: ${EMAIL_SUBJECT:-BookVault}
+      
+      # CORS
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      
+      # Rate limiting
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}  # 15 minutes
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - bookvault-network
+
+  # Frontend React App
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev  # Use dev stage for development
+    container_name: bookvault_frontend
+    restart: on-failure
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      # Vite configuration
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/v1}
+      VITE_APP_NAME: ${VITE_APP_NAME:-BookVault}
+    depends_on:
+      - backend
+    networks:
+      - bookvault-network
+
+volumes:
+  db-data:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  bookvault-network:
+    driver: bridge 
